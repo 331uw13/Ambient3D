@@ -137,7 +137,7 @@ void AM::Terrain::m_get_chunk_mesh_quad(
     }
 }
 
-float AM::Terrain::get_height(float x, float z) {
+float AM::Terrain::get_height(float x, float z, Vector3* normal_out) {
     this->chunks_mutex.lock();
 
     int chunk_x = (int)floor(x / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
@@ -152,37 +152,39 @@ float AM::Terrain::get_height(float x, float z) {
 
     RayCollision hit_info;
     Ray ray = {
-        .position = Vector3(x, 100.0f, z),
+        .position = Vector3(x, AM::TERRAIN_MAX_HEIGHT, z),
         .direction = Vector3(0.0f, -1.0f, 0.0f)
     };
 
-    /*
-    printf("WORLD = %0.2f, %0.2f\n", x, z);
-    printf("LOCAL = %i, %i\n"
-           "CHUNK = %i, %i\n\n", local_x, local_z,  chunk_x,chunk_z);
-    */
-
-    const Color COLORA = Color(255, 50, 50, 150);
-    const Color COLORB = Color(60, 50, 255, 150);
-
     Triangle2X quad;
-    m_get_chunk_mesh_quad(
-                    chunk_x,
-                    chunk_z,
-                    local_x,
-                    local_z,
-                    &quad);
 
-    DrawSphere(quad.a0, 0.2, COLORA);
-    DrawSphere(quad.a1, 0.2, COLORA);
-    DrawSphere(quad.a2, 0.2, COLORA);
-    
-    DrawSphere(quad.b0, 0.2, COLORB);
-    DrawSphere(quad.b1, 0.2, COLORB);
-    DrawSphere(quad.b2, 0.2, COLORB);
+    for(int iz = -1; iz <= 1; iz++) {
+        for(int ix = -1; ix <= 1; ix++) {
+            m_get_chunk_mesh_quad(
+                            chunk_x,
+                            chunk_z,
+                            local_x + ix,
+                            local_z + iz,
+                            &quad);
 
+            hit_info = GetRayCollisionTriangle(ray, quad.a0, quad.a1, quad.a2);
+            if(hit_info.hit) {
+                goto loop_exit;
+            }
+ 
+            hit_info = GetRayCollisionTriangle(ray, quad.b0, quad.b1, quad.b2);
+            if(hit_info.hit) {
+                goto loop_exit;
+            }
+        }
+    }
+loop_exit:
+
+    if(normal_out && hit_info.hit) {
+        *normal_out = hit_info.normal;
+    }
 
     this->chunks_mutex.unlock();
-    return 0;
+    return (hit_info.hit) ? (AM::TERRAIN_MAX_HEIGHT - hit_info.distance) : 0;
 }
 

@@ -11,7 +11,7 @@
 #include "shader_util.hpp"
 #include "uniform_buffer.hpp"
 #include "light.hpp"
-
+#include "renderable.hpp"
 
 
 
@@ -41,7 +41,8 @@ namespace AM {
             Light** add_light(const Light& light);
             void    remove_light(Light** light);
             void    update_lights();
-
+            void    draw_info();
+            void    draw_text(int font_size, const char* text, int x, int y, const Color& color);
 
 
         private:

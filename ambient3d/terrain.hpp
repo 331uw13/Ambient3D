@@ -19,6 +19,7 @@ namespace AM {
     // TODO: These are not needed actually.
     static constexpr uint16_t MAX_TERRAIN_ROWS = 8;
     static constexpr uint16_t MAX_TERRAIN_CHUNKS = MAX_TERRAIN_ROWS * MAX_TERRAIN_ROWS;
+    static constexpr float    TERRAIN_MAX_HEIGHT = 500.0f;
 
     class Terrain {
         public:
@@ -35,7 +36,7 @@ namespace AM {
             void unload_all_chunks();
             void find_new_chunks(int chunk_x, int chunk_z, int radius);
             void render(const Player& player, const Material& material, float radius);
-            float get_height(float x, float z);
+            float get_height(float x, float z, Vector3* normal_out = NULL);
 
         private:
             std::atomic<bool>  m_threads_running;

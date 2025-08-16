@@ -47,7 +47,7 @@ AM::State::~State() {
     CloseWindow();
 }
 
-
+    
 void AM::State::add_shader(const Shader& shader) {
     if(!IsShaderValid(shader)) {
         fprintf(stderr, "ERROR! Cant add broken shader to state.\n");
@@ -124,14 +124,6 @@ void AM::State::update_lights() {
     for(size_t i = 0; i < m_lights.size(); i++) {
         Light& light = m_lights[i];
 
-        /*
-        printf("ID=%li, %0.2f, %0.2f, %0.2f\n",
-                light.id,
-                light.pos.x,
-                light.pos.y,
-                light.pos.z
-                    );*/
-
         light.id = i;
         bool need_update = false;
         if(light.force_update) {
@@ -175,9 +167,34 @@ void AM::State::update_lights() {
     }
 }
 
+void AM::State::draw_text(int font_size, const char* text, int x, int y, const Color& color) {
+    DrawTextEx(this->font, text, Vector2(x, y), font_size, 1.0f, color);
+}
 
+void AM::State::draw_info() {
+    int text_y = 10;
+    int text_x = 15;
+    constexpr int y_add = 16;
+    constexpr int font_size = 18;
+    draw_text(font_size, TextFormat("FPS %i", GetFPS()), text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("XYZ = (%0.2f, %0.2f, %0.2f)", 
+                this->player.pos.x,
+                this->player.pos.y,
+                this->player.pos.z
+                ), text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("Chunk = (%i, %i)", 
+                this->player.chunk_x,
+                this->player.chunk_z), text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("NoClip = %s", this->player.noclip ? "Yes" : "No"),
+            text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("OnGround = %s", this->player.on_ground ? "Yes" : "No"),
+            text_x, text_y, WHITE);
 
-
+}
 
 
 

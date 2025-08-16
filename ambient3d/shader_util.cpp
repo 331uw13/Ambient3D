@@ -14,21 +14,18 @@ namespace {
 
     static constexpr int LOCATION_NOTFOUND = -1;
     static int _find_location(int shader_id, const char* u_name) {
-        int location = LOCATION_NOTFOUND;
-        const auto search1 = g_shader_map.find(shader_id);
-        if(search1 == g_shader_map.end()) {
-            location = rlGetLocationUniform(shader_id, u_name);
-            g_shader_map[shader_id][u_name] = location;
-            if(location >= 0) {
-                printf("+ Found uniform location for '%s': %i\n", u_name, location);
-            }
-            else {
-                fprintf(stderr, "ERROR! Could not find location for '%s' ShaderID=%i\n", 
-                        u_name, shader_id);
-            }
+
+        int location = -1;
+
+        const auto search0 = g_shader_map.find(shader_id);
+        if((search0 == g_shader_map.end())
+        || (search0->second.find(u_name) == search0->second.end())) {
+            printf("Found uniform \"%s\"\n", u_name);
+            location = glGetUniformLocation(shader_id, u_name);
+            g_shader_map[shader_id].insert(std::make_pair(u_name, location));
         }
         else {
-            location = g_shader_map[shader_id][u_name];
+            location = search0->second.find(u_name)->second;
         }
 
         return location;

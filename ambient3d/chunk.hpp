@@ -51,12 +51,9 @@ namespace AM {
 
         private:
 
-
             //==== Private Functions ====
             void m_generate_heightmap(int origin_x, int origin_z);
             float m_get_height_at_local(int x, int z);
-
-
 
             //==== Private Variables ====
             std::array<float, HEIGHTMAP_SIZE> m_heightmap;

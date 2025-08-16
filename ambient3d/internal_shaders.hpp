@@ -7,24 +7,12 @@
 namespace AM {
     namespace I_Shaders {
 
-        /*
-        static constexpr const char*
-            TEMPLATE = R"(
-            #version 430
-
-            void main() {
-                
-            }
-
-            )";
-        */
-
         static constexpr const char*
             GLSL_VERSION = "#version 430\n";
 
         static constexpr const char*
             DEFAULT_VERTEX = R"(
-            in vec3 vertex_pos;
+            in vec3 vertex_position;
             in vec2 vertex_texcoord;
             in vec3 vertex_normal;
             in vec4 vertex_color;
@@ -32,6 +20,9 @@ namespace AM {
             uniform mat4 mvp;
             uniform mat4 matModel;
             uniform mat4 matNormal;
+           
+            uniform int u_affected_by_wind;
+            uniform float  u_time;
 
             out vec2 frag_texcoord;
             out vec4 frag_color;
@@ -41,9 +32,15 @@ namespace AM {
             void main() {
                 frag_texcoord = vertex_texcoord;
                 frag_color = vertex_color;
+                vec3 vertex_pos = vertex_position;
+                if(u_affected_by_wind == 1) {
+                    float T = u_time * 3.0;
+                    vertex_pos.x += sin(T*0.8523 + vertex_pos.y + cos(T*2.152+vertex_pos.y*1.52)*0.3)*0.3;
+                    vertex_pos.z += cos(T*0.2583 + vertex_pos.y + sin(T*1.822+vertex_pos.y*1.73)*0.3)*0.3;
+                }
                 frag_position = vec3(matModel*vec4(vertex_pos, 1.0));
                 frag_normal = normalize(vec3(matNormal * vec4(vertex_normal, 1.0)));
-
+               
                 gl_Position = mvp * vec4(vertex_pos, 1.0);
             }
 
@@ -58,14 +55,15 @@ namespace AM {
 
             uniform sampler2D texture0;
             uniform vec4 colDiffuse;
-
-            uniform vec3 u_view_pos;
-
+            uniform vec3   u_view_pos;
+            
             out vec4 out_color;
 
             void main() {
+                vec4 tex = texture(texture0, frag_texcoord);
+                if(tex.a < 0.5) { discard; }
                 vec3 lights = compute_lights(frag_position, frag_normal, u_view_pos);
-                out_color = vec4(0.5, 0.5, 0.5, 1.0) * vec4(lights, 1.0);
+                out_color = (tex * colDiffuse) * vec4(lights, 1.0);
                 out_color = vec4(pow(out_color.rgb, vec3(1.0/1.6)), out_color.a);
             }
             )";
