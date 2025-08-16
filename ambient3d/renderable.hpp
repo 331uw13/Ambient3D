@@ -10,11 +10,12 @@
 namespace AM {
 
     struct MeshAttrib {
-        bool affected_by_wind   { false };
-        bool render_backface    { false };
 
         // NOTE: This only works with shader programs
         //       which implement wind in their vertex shaders.
+        bool affected_by_wind   { false };
+
+        bool render_backface    { false };
         Color tint              { WHITE };
     };
 
