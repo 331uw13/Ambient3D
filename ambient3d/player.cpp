@@ -26,7 +26,6 @@ AM::Player::Player() {
     this->on_ground = false;
     this->num_jumps_in_air = 2;
     this->pos_prevframe = this->pos;
-    m_slide_boost = 0.0f;
 }
 
 AM::Player::~Player() {
@@ -172,7 +171,7 @@ void AM::Player::m_update_gravity(State* st) {
     this->pos_prevframe = this->pos;
    
     float terrain_level = st->terrain.get_height(this->pos.x, this->pos.z, &this->terrain_normal);
-    this->on_ground = (this->pos.y - this->height) < terrain_level;
+    this->on_ground = ((this->pos.y - this->height) < terrain_level);
 
     if(m_sliding) {
         this->pos.y = terrain_level + (this->height - 0.01f);

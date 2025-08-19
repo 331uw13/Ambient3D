@@ -15,8 +15,8 @@ namespace AM {
         float    cutoff;
         float    strength;
 
-        size_t   id;
-        bool     force_update;
+        size_t   id { 0 };
+        bool     force_update { false };
 
         bool equal(const Light& rhs) {
             return (

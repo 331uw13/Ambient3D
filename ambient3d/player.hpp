@@ -14,24 +14,24 @@ namespace AM {
             
             //==== Public Variables ====
             Camera   cam;
-            Vector3  pos;
-            Vector3  vel; // Velocity.
-            Vector3  pos_prevframe;
-            bool     noclip;
-            float    noclip_speed;
-            bool     on_ground;
-            float    gravity;
-            float    speed;
-            float    height;
-            float    cam_sensetivity;
-            float    cam_yaw;
-            float    cam_pitch;
-            Vector3  movement;
-            Vector3  forward;
-            int      chunk_x;
-            int      chunk_z;
-            int8_t   num_jumps_in_air;
-            Vector3  terrain_normal;
+            Vector3  pos { 0, 0, 0 };
+            Vector3  vel { 0, 0, 0 }; // Velocity.
+            Vector3  pos_prevframe { 0, 0, 0 };
+            bool     noclip { false };
+            float    noclip_speed { 0 };
+            bool     on_ground { false };
+            float    gravity { 0 };
+            float    speed { 0 };
+            float    height { 0 };
+            float    cam_sensetivity { 0.0f };
+            float    cam_yaw { 0.0f };
+            float    cam_pitch { 0.0f };
+            Vector3  movement { 0, 0, 0 };
+            Vector3  forward { 0, 0, 0 };
+            int      chunk_x { 0 };
+            int      chunk_z { 0 };
+            int8_t   num_jumps_in_air { 0 };
+            Vector3  terrain_normal { 0, 0, 0 };
 
             //==== Public Functions ====
             void update_movement(State* st);
@@ -46,12 +46,12 @@ namespace AM {
             void m_update_slide();
   
             //==== Private Variables ====
-            float m_slide_boost;
-            bool m_jumped;
-            int  m_num_jumps_left;
-            bool m_sliding;
+            float m_slide_boost { false };
+            bool m_jumped { false };
+            int  m_num_jumps_left { 0 };
+            bool m_sliding { false };
             
-            float m_Yvelocity_in_air;
+            float m_Yvelocity_in_air { 0.0f };
     };
 };
 

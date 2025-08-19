@@ -1,11 +1,10 @@
 #include <raylib.h>
-#include <rlgl.h>
 #include <map>
 #include <cstdio>
 
 #include "shader_util.hpp"
+#include "glsl_preproc.hpp"
 #include "external/glad.h"
-
 
 namespace {
     //         shader id,    uniform name,   uniform location
@@ -20,8 +19,8 @@ namespace {
         const auto search0 = g_shader_map.find(shader_id);
         if((search0 == g_shader_map.end())
         || (search0->second.find(u_name) == search0->second.end())) {
-            printf("Found uniform \"%s\"\n", u_name);
             location = glGetUniformLocation(shader_id, u_name);
+            printf("Found uniform \"%s\" (%i)\n", u_name, location);
             g_shader_map[shader_id].insert(std::make_pair(u_name, location));
         }
         else {
@@ -32,6 +31,9 @@ namespace {
     }
 };
 
+void AM::init_instanced_shader(Shader* shader) {
+    shader->locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(*shader, "instanceTransform");
+}
 
 // TODO: Implement something when the value has not changed, it dont need to be updated.
  
@@ -61,3 +63,14 @@ void AM::set_uniform_matrix(int shader_id, const char* uniform_name, const Matri
 }
 
     
+void AM::set_uniform_sampler(int shader_id, const char* uniform_name, const Texture2D& texture, int slot) {
+    glUseProgram(shader_id);
+    int location = _find_location(shader_id, uniform_name);
+    if(location) {
+        glUniform1i(location, slot);
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+    }
+}
+
+

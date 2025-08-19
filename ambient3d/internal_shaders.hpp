@@ -12,16 +12,23 @@ namespace AM {
 
         static constexpr const char*
             DEFAULT_VERTEX = R"(
-            in vec3 vertex_position;
-            in vec2 vertex_texcoord;
-            in vec3 vertex_normal;
-            in vec4 vertex_color;
+
+            #include @GLSL_VERSION
+
+            in vec3 vertexPosition;
+            in vec2 vertexTexcoord;
+            in vec3 vertexNormal;
+            in vec4 vertexColor;
+           
+            #ifdef RENDER_INSTANCED
+                in mat4 instanceTransform;
+            #endif
 
             uniform mat4 mvp;
             uniform mat4 matModel;
             uniform mat4 matNormal;
            
-            uniform int u_affected_by_wind;
+            uniform int    u_affected_by_wind;
             uniform float  u_time;
 
             out vec2 frag_texcoord;
@@ -30,32 +37,44 @@ namespace AM {
             out vec3 frag_position;
 
             void main() {
-                frag_texcoord = vertex_texcoord;
-                frag_color = vertex_color;
-                vec3 vertex_pos = vertex_position;
+                
+                frag_texcoord = vertexTexcoord;
+                frag_color = vertexColor;
+                vec3 vertex_pos = vertexPosition;
+
                 if(u_affected_by_wind == 1) {
                     float T = u_time * 3.0;
                     vertex_pos.x += sin(T*0.8523 + vertex_pos.y + cos(T*2.152+vertex_pos.y*1.52)*0.3)*0.3;
                     vertex_pos.z += cos(T*0.2583 + vertex_pos.y + sin(T*1.822+vertex_pos.y*1.73)*0.3)*0.3;
                 }
-                frag_position = vec3(matModel*vec4(vertex_pos, 1.0));
-                frag_normal = normalize(vec3(matNormal * vec4(vertex_normal, 1.0)));
-               
-                gl_Position = mvp * vec4(vertex_pos, 1.0);
+                #ifdef RENDER_INSTANCED
+                    frag_position = vec3(instanceTransform*vec4(vertex_pos, 1.0)); 
+                    frag_normal = vec3(instanceTransform * vec4(vertexNormal, 0.0));
+                    gl_Position = mvp*instanceTransform*vec4(vertex_pos, 1.0);
+                #else
+                    frag_position = vec3(matModel*vec4(vertex_pos, 1.0));
+                    frag_normal = normalize(vec3(matNormal * vec4(vertexNormal, 1.0)));
+                    gl_Position = mvp * vec4(vertex_pos, 1.0);
+                #endif
             }
 
             )";
 
+
         static constexpr const char*
             DEFAULT_FRAGMENT = R"(
+            #include @GLSL_VERSION
+            #include @AMBIENT3D_LIGHTS
+            
             in vec2 frag_texcoord;
             in vec4 frag_color;
             in vec3 frag_normal;
             in vec3 frag_position;
 
+
             uniform sampler2D texture0;
             uniform vec4 colDiffuse;
-            uniform vec3   u_view_pos;
+            uniform vec3 u_view_pos;
             
             out vec4 out_color;
 
@@ -64,9 +83,189 @@ namespace AM {
                 if(tex.a < 0.5) { discard; }
                 vec3 lights = compute_lights(frag_position, frag_normal, u_view_pos);
                 out_color = (tex * colDiffuse) * vec4(lights, 1.0);
-                out_color = vec4(pow(out_color.rgb, vec3(1.0/1.6)), out_color.a);
             }
             )";
+
+        static constexpr const char*
+            POSTPROCESS_FRAGMENT = R"(
+            #include @GLSL_VERSION
+            
+            in vec2 frag_texcoord;
+            in vec4 frag_color;
+            in vec3 frag_normal;
+            in vec3 frag_position;
+
+
+            uniform float u_vision_effect;
+            uniform float u_time;
+            uniform sampler2D texture_result;
+            layout (location = 3) uniform sampler2D texture_bloom;
+           
+            out vec4 out_color;
+
+            vec3 vision_effect() {
+                float k = u_vision_effect * 3.0;
+
+                vec2 texture_size = vec2(textureSize(texture_result, 0));
+                vec2 uv = gl_FragCoord.xy / texture_size;
+                vec2 tx = 1.0 / texture_size;
+                
+                tx.x += cos(u_time)*tx.x;
+                
+                float tM = u_vision_effect * 3.0 + 0.5*floor(cos(u_time*0.5+(0.5+0.5*sin(u_time*0.05)))*10.0);
+
+                float rX = cos(tM*u_time+uv.y*30) * (tx.x * k);
+                float rY = sin(tM*u_time+uv.x*30) * (tx.y * k);
+                
+                float gX = cos(tM*u_time+uv.x*30) * (tx.x * k);
+                float gY = sin(tM*u_time+uv.y*30) * (tx.y * -k);
+                
+                float bX = cos(tM*u_time+uv.y*30) * (tx.x * -k);
+                float bY = sin(tM*u_time+uv.y*30) * (tx.y * k);
+
+                float red    = texture(texture_result, frag_texcoord+vec2(rX, rY)).r;
+                float green  = texture(texture_result, frag_texcoord+vec2(gX, gY)).g;
+                float blue   = texture(texture_result, frag_texcoord+vec2(bX, bY)).b;
+            
+                float noise = fract(cos(dot(vec2(-uv.x*20, fract(uv.y)+uv.y*20), vec2(52.621,67.1262)))*72823.53)/40.0;
+                float uvl = clamp(pow(length(uv-0.5), 2.0)*3.0+noise, 0.0, 1.0);
+
+                return vec3(red, green+blue*0.5, blue) * uvl;
+            }
+
+            void main() {
+                
+                vec4 result = texture(texture_result, frag_texcoord);
+                vec3 bloom = texture(texture_bloom, frag_texcoord).rgb;
+                
+                result.rgb += bloom;
+               
+                if(u_vision_effect > 0) {
+                    result.rgb += vision_effect();
+                }
+                if(u_vision_effect > 0.5) {
+                    float modulation = sin(u_time * u_vision_effect)*0.5+0.5;
+                    float pulse = 1.0-pow((modulation * (sin(u_time * 5.0))*0.5+0.5), 5.0);
+                    result.rgb *= pow(pulse, 0.5);
+                }
+
+                out_color = result;
+                out_color = vec4(pow(out_color.rgb, vec3(1.0/1.15)), out_color.a);
+            }
+            )";
+
+        static constexpr const char*
+            BLOOM_TRESH_FRAGMENT = R"(
+            #include @GLSL_VERSION
+            
+            in vec2 frag_texcoord;
+            in vec4 frag_color;
+            in vec3 frag_normal;
+            in vec3 frag_position;
+
+            uniform sampler2D texture_result;
+            uniform sampler2D bloom_result;
+           
+            out vec4 out_color;
+
+            void main() {
+                vec4 black = vec4(0.0, 0.0, 0.0, 1.0);
+                vec4 result = texture(texture_result, frag_texcoord);
+                float light = dot(result.rgb, vec3(0.5, 1.0, 1.0));
+                
+                out_color.rgb = mix(black, result, pow(light, 4.0)).rgb*0.5;
+                out_color.a = result.a;    
+            }
+            )";
+
+        static constexpr const char*
+            BLOOM_DOWNSAMPLE_FRAGMENT = R"(
+            #include @GLSL_VERSION
+            
+            in vec2 frag_texcoord;
+            in vec4 frag_color;
+            in vec3 frag_normal;
+            in vec3 frag_position;
+
+            uniform sampler2D texture0;
+
+            out vec4 out_color;
+
+            void main() {
+               
+                int size = 2;
+                vec2 texture_size = vec2(textureSize(texture0, 0));
+                vec2 texel_size = 1.0 / texture_size;
+                vec2 uv = gl_FragCoord.xy / texture_size;
+
+                vec3 result = vec3(0, 0, 0);
+                float sum = 0.0;
+
+                for(int x = -size; x <= size; x++) {
+                    for(int y = -size; y <= size; y++) {
+                        vec2 offset = vec2(float(x), float(y));
+                        vec2 texel_pos = frag_texcoord + offset * texel_size;
+                        if(texel_pos.y > 0.999) { break; }
+                        if(texel_pos.y < 0.001) { break; }
+                        if(texel_pos.x > 0.999) { break; }
+                        if(texel_pos.x < 0.001) { break; }
+
+                        sum += 1.0;
+                        result += texture(texture0, texel_pos).rgb;
+                    }
+                }
+
+                result /= sum;
+                out_color = vec4(result, 1.0);
+            }
+            )";
+
+        static constexpr const char*
+            BLOOM_UPSAMPLE_FRAGMENT = R"(
+            #include @GLSL_VERSION
+            
+            in vec2 frag_texcoord;
+            in vec4 frag_color;
+            in vec3 frag_normal;
+            in vec3 frag_position;
+
+            uniform sampler2D texture0;
+           
+            out vec4 out_color;
+
+            void main() {
+                
+                int size = 2;
+                vec2 texture_size = vec2(textureSize(texture0, 0));
+                
+                vec2 texel_size = 1.0 / texture_size;
+                vec2 uv = gl_FragCoord.xy / texture_size;
+                vec3 result = vec3(0, 0, 0);
+                float sum = 0;
+
+                for(int x = -size; x <= size; x++) {
+                    for(int y = -size; y <= size; y++) {
+                        vec2 offset = vec2(float(x), float(y));
+                        vec2 texel_pos = frag_texcoord + offset * texel_size;
+                        
+                        if(texel_pos.y > 0.999) { break; }
+                        if(texel_pos.y < 0.001) { break; }
+                        if(texel_pos.x > 0.999) { break; }
+                        if(texel_pos.x < 0.001) { break; }
+
+                        float dist = distance(frag_texcoord, texel_pos);
+
+                        result += texture(texture0, texel_pos).rgb * dist;
+                        sum += dist;
+                    }
+                }
+
+                result /= sum;
+                out_color = vec4(result, 1.0);
+            }
+            )";
+
+
 
         static constexpr const char*
             LIGHTS_GLSL = R"(

@@ -3,14 +3,22 @@
 
 #include <initializer_list>
 #include <string>
+#include <raylib.h>
+#include <raymath.h>
+#include <cstdint>
+
+namespace AM {
+    class State;
+};
+
 
 namespace AMutil {
 
     float normalize(float t, float min, float max);
     float lerp(float t, float min, float max);
     float map(float t, float src_min, float src_max, float dst_min, float dst_max);
-    int    randomi(int min, int max, int* seed);
-    float  randomf(float min, float max, int* seed);
+    int    randomi(int min, int max, int64_t* seed);
+    float  randomf(float min, float max, int64_t* seed);
 
     template<typename T>
     inline void clamp(T& v, T min, T max) {
@@ -21,6 +29,19 @@ namespace AMutil {
     std::string combine_constchar(std::initializer_list<const char*> list);
     std::string combine_files(std::initializer_list<const char*> filenames);
 
+    void draw_mesh_instanced(Mesh mesh, Material material, const Matrix *transforms, int instances);
+
+            
+    // If 'shader_idx' < 0: Default shader is used.
+    // If dimensions are negative the corresponding texture dimensions are used.
+    void resample_texture(
+            AM::State* st,
+            RenderTexture2D to,
+            RenderTexture2D from,
+            int src_width, int src_height,
+            int dst_width, int dst_height,
+            int shader_idx 
+            );
 };
 
 

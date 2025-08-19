@@ -14,18 +14,84 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
     SetTraceLogLevel(LOG_ALL);
     DisableCursor();
 
-    
-    // Default shader.
+    GLSL_preproc_add_meminclude("GLSL_VERSION", "#version 430\n");
+    GLSL_preproc_add_meminclude("AMBIENT3D_LIGHTS", I_Shaders::LIGHTS_GLSL);
+
+
+    // DEFAULT
     this->add_shader(LoadShaderFromMemory(
-                AMutil::combine_constchar({
-                    I_Shaders::GLSL_VERSION,
-                    I_Shaders::DEFAULT_VERTEX,
-                }).c_str(),
-                AMutil::combine_constchar({
-                    I_Shaders::GLSL_VERSION,
-                    I_Shaders::LIGHTS_GLSL,
-                    I_Shaders::DEFAULT_FRAGMENT
-                }).c_str()));
+                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
+                GLSL_preproc(I_Shaders::DEFAULT_FRAGMENT).c_str()
+                ));
+
+    // DEFAULT_INSTANCED
+    this->add_shader(LoadShaderFromMemory(
+                GLSL_preproc(I_Shaders::DEFAULT_VERTEX, PREPROC_FLAGS::DEFINE__RENDER_INSTANCED).c_str(),
+                GLSL_preproc(I_Shaders::DEFAULT_FRAGMENT).c_str()
+                ));
+    AM::init_instanced_shader(&this->shaders.back());
+    
+
+    // POST-PROCESSING
+    this->add_shader(LoadShaderFromMemory(
+                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
+                GLSL_preproc(I_Shaders::POSTPROCESS_FRAGMENT).c_str()
+                ));
+ 
+    // BLOOM_TRESHOLD
+    this->add_shader(LoadShaderFromMemory(
+                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
+                GLSL_preproc(I_Shaders::BLOOM_TRESH_FRAGMENT).c_str()
+                ));  
+
+    // BLOOM_DOWNSAMPLE_FRAGMENT
+    this->add_shader(LoadShaderFromMemory(
+                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
+                GLSL_preproc(I_Shaders::BLOOM_DOWNSAMPLE_FRAGMENT).c_str()
+                ));  
+
+    // BLOOM_UPSAMPLE_FRAGMENT
+    this->add_shader(LoadShaderFromMemory(
+                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
+                GLSL_preproc(I_Shaders::BLOOM_UPSAMPLE_FRAGMENT).c_str()
+                ));  
+
+
+
+    // Create rendering targets.
+
+    m_render_targets[RenderTargetIDX::RESULT]
+        = LoadRenderTexture(win_width, win_height);
+
+    m_render_targets[RenderTargetIDX::BLOOM_TRESHOLD]
+        = LoadRenderTexture(win_width, win_height);
+    
+    m_render_targets[RenderTargetIDX::BLOOM_PRE_RESULT]
+        = LoadRenderTexture(win_width, win_height);
+    
+    m_render_targets[RenderTargetIDX::BLOOM_RESULT]
+        = LoadRenderTexture(win_width, win_height);
+
+
+    printf("---------- Create Bloom Samples ----------\n");
+    
+    int sample_res_X = win_width;
+    int sample_res_Y = win_height;
+    constexpr float scale_factor = 0.85f;
+
+
+    for(size_t i = 0; i < m_bloom_samples.size(); i++) {
+        
+        m_bloom_samples[i] = LoadRenderTexture(sample_res_X, sample_res_Y);
+        SetTextureFilter(m_bloom_samples[i].texture, TEXTURE_FILTER_BILINEAR);
+        sample_res_X = round((float)sample_res_X * scale_factor);
+        sample_res_Y = round((float)sample_res_Y * scale_factor);
+
+    }
+    
+    printf("-----------------------------------------\n");
+
+
 
     m_lights_ubo.create(1, { 
             UBO_ELEMENT {
@@ -43,11 +109,18 @@ AM::State::~State() {
     }
 
     m_lights_ubo.free();
-    
+   
+    // Unload render targets.
+    for(size_t i = 0; i < m_render_targets.size(); i++) {
+        UnloadRenderTexture(m_render_targets[i]);
+    }
+    for(size_t i = 0; i < m_bloom_samples.size(); i++) {
+        UnloadRenderTexture(m_bloom_samples[i]);
+    }
     CloseWindow();
 }
 
-    
+
 void AM::State::add_shader(const Shader& shader) {
     if(!IsShaderValid(shader)) {
         fprintf(stderr, "ERROR! Cant add broken shader to state.\n");
@@ -55,32 +128,12 @@ void AM::State::add_shader(const Shader& shader) {
     }
     this->shaders.push_back(shader);
 }
-/*
-Light* AM::State::add_light(const Light& light) {
-    m_lights.push_back(light);
-    //Light* light_ptr = &m_lights.back();
-    return light_ptr;
-}
-*/
 
 AM::Light** AM::State::add_light(const Light& light) {
-    //m_lights.push_back(light);
-    //size_t new_size = m_lights.size();
-    
-    //m_lights_ubo.update_element(m_lights_ubo.size()-1, (void*)&new_size, sizeof(int));
-    /*
-    Light* light_ptr = &m_lights.back();
-    m_light_ptrs.push_back(light_ptr);
-
-    Light** result = &m_light_ptrs.back();
-    */
-
-
     if(m_num_lights+1 >= AM::MAX_LIGHTS) {
         fprintf(stderr, "Increase the light array size or remove unused lights.\n");
         return NULL;
     }
-
 
     m_lights[m_num_lights] = light;
     m_light_ptrs[m_num_lights] = &m_lights[m_num_lights];
@@ -167,9 +220,16 @@ void AM::State::update_lights() {
     }
 }
 
+void AM::State::set_vision_effect(float amount) {
+    AMutil::clamp<float>(amount, 0.0f, 1.0f);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::POST_PROCESSING].id, "u_vision_effect", amount);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::POST_PROCESSING].id, "u_time", GetTime());
+}
+
 void AM::State::draw_text(int font_size, const char* text, int x, int y, const Color& color) {
     DrawTextEx(this->font, text, Vector2(x, y), font_size, 1.0f, color);
 }
+
 
 void AM::State::draw_info() {
     int text_y = 10;
@@ -194,6 +254,136 @@ void AM::State::draw_info() {
     draw_text(font_size, TextFormat("OnGround = %s", this->player.on_ground ? "Yes" : "No"),
             text_x, text_y, WHITE);
 
+}
+
+            
+void AM::State::frame_begin() {
+    BeginTextureMode(m_render_targets[RenderTargetIDX::RESULT]);
+    ClearBackground(BLACK);
+    BeginMode3D(this->player.cam);
+
+    // TODO: Move these.
+    //       User may need better control.
+    if(this->mouse_captured) {
+        this->player.update_camera();
+    }
+    this->player.update_movement(this);
+    this->update_lights();
+    this->terrain.find_new_chunks(
+            this->player.chunk_x,
+            this->player.chunk_z, 16);
+
+}
+
+
+void AM::State::m_render_bloom() {
+
+    // Get bloom treshold texture.
+    AMutil::resample_texture(
+            this,
+            /* TO */   m_bloom_samples[0],
+            /* FROM */ m_render_targets[RenderTargetIDX::RESULT],
+            -1, -1,
+            -1, -1, 
+            ShaderIDX::BLOOM_TRESHOLD
+            );
+
+    size_t p = 0;
+
+    // Scale down and filter the texture each step.
+    for(size_t i = 1; i < m_bloom_samples.size(); i++) {
+        p = i - 1; // Previous sample.
+
+        AMutil::resample_texture(
+                this,
+                /* TO */   m_bloom_samples[i],
+                /* FROM */ m_bloom_samples[p],
+                -1, -1,
+                -1, -1, 
+                ShaderIDX::BLOOM_DOWNSAMPLE_FILTER
+                );
+    }
+
+    // Scale up and filter the texture each step.
+    for(size_t i = m_bloom_samples.size()-2; i > 0; i--) {
+        p = i + 1; // Previous sample.
+
+        AMutil::resample_texture(
+                this,
+                /* TO */   m_bloom_samples[i],
+                /* FROM */ m_bloom_samples[p],
+                -1, -1,
+                -1, -1, 
+                ShaderIDX::BLOOM_UPSAMPLE_FILTER
+                );
+    }
+
+
+    // Now the result is ready.
+
+    AMutil::resample_texture(
+            this,
+            /* TO */   m_render_targets[RenderTargetIDX::BLOOM_RESULT],
+            /* FROM */ m_bloom_samples[1],
+            -1, -1,
+            -1, -1, 
+            -1
+            );
+}
+
+
+static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool invert) {
+    DrawTexturePro(tex,
+            (Rectangle){
+                0, 0, (float)tex.width, ((invert) ? -1.0 : 1.0) * (float)(tex.height)
+            },
+            (Rectangle){
+                0, 0, (float)tex.width * scale, ((invert) ? -1.0 : 1.0) * (float)(tex.height * scale)
+            },
+            (Vector2){ -X, Y }, 0, WHITE);
+}
+
+void AM::State::frame_end() {
+    EndMode3D();
+    this->draw_info();
+    EndTextureMode();
+
+
+    m_render_bloom();
+
+
+    // Postprocessing.
+
+    BeginDrawing();
+    
+    ClearBackground(BLACK);
+    const Shader& shader = this->shaders[ShaderIDX::POST_PROCESSING];
+    BeginShaderMode(shader);
+    
+    AM::set_uniform_sampler(shader.id, "texture_bloom", m_render_targets[RenderTargetIDX::BLOOM_RESULT].texture, 3);
+    //AM::set_uniform_sampler(shader.id, "texture_bloom", m_bloom_samples[1].texture, 3);
+
+    const int width  = m_render_targets[RenderTargetIDX::RESULT].texture.width;
+    const int height = m_render_targets[RenderTargetIDX::RESULT].texture.height;
+    DrawTextureRec(m_render_targets[RenderTargetIDX::RESULT].texture,
+            (Rectangle){
+                0, 0, (float)width, (float)-height
+            },
+            (Vector2){ 0, 0 }, WHITE);
+
+    EndShaderMode();
+
+
+    //_draw_tex(m_render_targets[RenderTargetIDX::RESULT].texture, GetScreenWidth()*0.5, 0, 0.5, true);
+    //_draw_tex(m_render_targets[RenderTargetIDX::BLOOM_TRESHOLD].texture, 0, 0, 0.5, true);
+    //_draw_tex(m_render_targets[RenderTargetIDX::BLOOM_RESULT].texture, 0, -50, 1.0, true);
+    
+    //_draw_tex(m_bloom_samples[2].texture, 0, -50, 0.9, true);
+    
+    //_draw_tex(m_bloom_samples[m_bloom_samples.size()-1].texture, 0, -300, 3.0, true);
+   
+
+    EndDrawing();
 }
 
 
