@@ -16,6 +16,7 @@ namespace AM {
         
         bool render_backface    { false };
         Color tint              { WHITE };
+        float shine             { 3.0f };
     };
 
     class Renderable {

@@ -75,15 +75,85 @@ namespace AM {
             uniform sampler2D texture0;
             uniform vec4 colDiffuse;
             uniform vec3 u_view_pos;
-            
+            uniform float u_material_shine;
+
             out vec4 out_color;
 
             void main() {
                 vec4 tex = texture(texture0, frag_texcoord);
                 if(tex.a < 0.5) { discard; }
-                vec3 lights = compute_lights(frag_position, frag_normal, u_view_pos);
+                vec3 lights = compute_lights(
+                    frag_position,
+                    frag_normal,
+                    u_view_pos,
+                    u_material_shine
+                    );
                 out_color = (tex * colDiffuse) * vec4(lights, 1.0);
             }
+            )";
+
+        static constexpr const char*
+            LIGHTS_GLSL = R"(
+            #define MAX_LIGHTS 64
+
+            struct Light {
+                vec4 pos;
+                vec4 color;
+                vec4 settings;
+            };
+
+            layout(std140, binding = 1) uniform lights_ubo {
+                Light lights[MAX_LIGHTS];
+                int num_lights;
+            };
+
+            // Returns: RGB.
+            vec3 compute_lights(
+                vec3 frag_pos,
+                vec3 frag_n,
+                vec3 view_pos,
+                float material_shine
+            ){
+                vec3 final = vec3(0, 0, 0);
+                vec3 normal = normalize(frag_n);
+                //normal = mix(normal, vec3(0.0, 1.0, 0.0), 0.3);
+                for(int i = 0; i < num_lights; i++) {
+                    vec3 light_pos = lights[i].pos.xyz;
+                    vec3 light_dir = normalize(light_pos - frag_pos);
+                    vec3 view_dir = normalize(view_pos - frag_pos);
+                    vec3 halfway_dir = normalize(light_dir - view_dir);
+
+                    vec3 light_color = lights[i].color.rgb;
+                    float radius = lights[i].settings.x;
+                    float cutoff = lights[i].settings.y;
+
+
+                    // Diffuse.
+                    float diff = max(dot(normal, light_dir), 0.0);
+                    vec3 diffuse = diff * light_color;
+
+                    // Specular.
+                    float spec = pow(max(dot(view_dir, reflect(-light_dir, normal)), 0.0), material_shine);
+                    vec3 specular = spec * mix(vec3(1.0, 1.0, 1.0), light_color, 0.5);
+                    specular *= material_shine;
+
+                    // Attenuation.
+                    float L = 1.0;
+                    float Q = 2.3;
+                    float dist = distance(frag_pos, light_pos) / radius;
+                    dist = pow(dist, cutoff);
+                    float a = 1.0 / (2.0 + L * dist + Q * (dist * dist));
+                    
+                    diffuse *= a;
+                    specular *= (a*0.5);
+                    vec3 ambient = a * ((light_color * dist) * 0.15);
+                    specular = clamp(specular, vec3(0), vec3(1));
+                    final += diffuse + specular + ambient;
+                }
+
+                return clamp(final, vec3(0), vec3(1));
+            }
+
             )";
 
         static constexpr const char*
@@ -205,10 +275,10 @@ namespace AM {
                     for(int y = -size; y <= size; y++) {
                         vec2 offset = vec2(float(x), float(y));
                         vec2 texel_pos = frag_texcoord + offset * texel_size;
-                        if(texel_pos.y > 0.999) { break; }
-                        if(texel_pos.y < 0.001) { break; }
-                        if(texel_pos.x > 0.999) { break; }
-                        if(texel_pos.x < 0.001) { break; }
+                        if(texel_pos.y > 0.99) { break; }
+                        if(texel_pos.y < 0.01) { break; }
+                        if(texel_pos.x > 0.99) { break; }
+                        if(texel_pos.x < 0.01) { break; }
 
                         sum += 1.0;
                         result += texture(texture0, texel_pos).rgb;
@@ -248,10 +318,10 @@ namespace AM {
                         vec2 offset = vec2(float(x), float(y));
                         vec2 texel_pos = frag_texcoord + offset * texel_size;
                         
-                        if(texel_pos.y > 0.999) { break; }
-                        if(texel_pos.y < 0.001) { break; }
-                        if(texel_pos.x > 0.999) { break; }
-                        if(texel_pos.x < 0.001) { break; }
+                        if(texel_pos.y > 0.99) { break; }
+                        if(texel_pos.y < 0.01) { break; }
+                        if(texel_pos.x > 0.99) { break; }
+                        if(texel_pos.x < 0.01) { break; }
 
                         float dist = distance(frag_texcoord, texel_pos);
 
@@ -266,68 +336,6 @@ namespace AM {
             )";
 
 
-
-        static constexpr const char*
-            LIGHTS_GLSL = R"(
-            #define MAX_LIGHTS 64
-
-            struct Light {
-                vec4 pos;
-                vec4 color;
-                vec4 settings;
-            };
-
-            layout(std140, binding = 1) uniform lights_ubo {
-                Light lights[MAX_LIGHTS];
-                int num_lights;
-            };
-
-            // Returns: RGB.
-            vec3 compute_lights(
-                vec3 frag_pos,
-                vec3 frag_n,
-                vec3 view_pos
-            ){
-                vec3 final = vec3(0, 0, 0);
-                vec3 normal = normalize(frag_n);
-                //normal = mix(normal, vec3(0.0, 1.0, 0.0), 0.3);
-                for(int i = 0; i < num_lights; i++) {
-                    vec3 light_pos = lights[i].pos.xyz;
-                    vec3 light_dir = normalize(light_pos - frag_pos);
-                    vec3 view_dir = normalize(view_pos - frag_pos);
-                    vec3 halfway_dir = normalize(light_dir - view_dir);
-
-                    vec3 light_color = lights[i].color.rgb;
-                    float radius = lights[i].settings.x;
-                    float cutoff = lights[i].settings.y;
-
-
-                    // Diffuse.
-                    float diff = max(dot(normal, light_dir), 0.0);
-                    vec3 diffuse = diff * light_color;
-
-                    // Specular.
-                    float spec = pow(max(dot(view_dir, reflect(-light_dir, normal)), 0.0), 6.0);
-                    vec3 specular = spec * mix(vec3(1.0, 1.0, 1.0), light_color, 0.5);
-
-                    // Attenuation.
-                    float L = 1.0;
-                    float Q = 2.3;
-                    float dist = distance(frag_pos, light_pos) / radius;
-                    dist = pow(dist, cutoff);
-                    float a = 1.0 / (2.0 + L * dist + Q * (dist * dist));
-                    
-                    diffuse *= a;
-                    specular *= (a*0.5);
-                    vec3 ambient = a * ((light_color * dist) * 0.15);
-
-                    final += diffuse + specular + ambient;
-                }
-
-                return clamp(final, vec3(0), vec3(1));
-            }
-
-            )";
     };
 };
 

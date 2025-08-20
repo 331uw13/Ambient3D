@@ -66,8 +66,11 @@ void AM::Renderable::render() {
         if(mesh_attr.render_backface) {
             rlDisableBackfaceCulling();
         }
+        
+        mat.maps[MATERIAL_MAP_DIFFUSE].color = mesh_attr.tint;
 
         AM::set_uniform_int(mat.shader.id, "u_affected_by_wind", mesh_attr.affected_by_wind);
+        AM::set_uniform_float(mat.shader.id, "u_material_shine", mesh_attr.shine);
         DrawMesh(m_model.meshes[i], mat, m_model.transform);
         
         if(mesh_attr.render_backface) {

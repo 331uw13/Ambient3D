@@ -56,6 +56,12 @@ void AM::set_uniform_vec3(int shader_id, const char* uniform_name, const Vector3
     glUseProgram(shader_id);
     glUniform3f(_find_location(shader_id, uniform_name), value.x, value.y, value.z);
 }
+ 
+void AM::set_uniform_vec4(int shader_id, const char* uniform_name, const Vector4& value) {
+    glUseProgram(shader_id);
+    glUniform4f(_find_location(shader_id, uniform_name), value.x, value.y, value.z, value.w);
+}
+    
 
 void AM::set_uniform_matrix(int shader_id, const char* uniform_name, const Matrix& value) {
     glUseProgram(shader_id);

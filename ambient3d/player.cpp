@@ -18,7 +18,7 @@ AM::Player::Player() {
     this->vel = Vector3(0.0f, 0.0f, 0.0f);
     this->pos = Vector3(0.0f, 10.0f, 1.0f);
     this->speed = 50.0f;
-    this->cam_sensetivity = 0.0035f;
+    this->cam_sensetivity = 0.0028f;
     this->noclip = false;
     this->noclip_speed = 250.0f;
     this->height = 3.5f;
