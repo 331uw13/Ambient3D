@@ -16,6 +16,13 @@
 #include "glsl_preproc.hpp"
 #include "util.hpp"
 
+
+// TODO: Make networking optional to use ?
+
+#include "network/network.hpp"
+
+
+
 namespace AM {
 
     static constexpr int NUM_BLOOM_SAMPLES = 16;
@@ -61,8 +68,10 @@ namespace AM {
 
             bool mouse_captured { true };
 
+
         private:
 
+            bool m_connected_to_server;
 
             enum RenderTargetIDX : int {
                 RESULT,

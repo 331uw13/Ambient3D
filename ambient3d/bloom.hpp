@@ -4,9 +4,9 @@
 
 
 namespace AM {
-    class State;
-    void setup_bloom_targets(State* st);
-    void render_bloom(State* st);
+
+    // TODO: Move bloom rendering here from State
+
 }
 
 

@@ -54,13 +54,19 @@ void AM::Renderable::mesh_attribute(size_t mesh_index, const MeshAttrib& mesh_at
     }
 }
 
+
+// TODO: Merge instanced rendering into one function:
+// thing.render();
+// or
+// thing.render(AM::RENDER_INSTANCED, transforms);
+
 void AM::Renderable::render() {
     if(!m_loaded) { return; }
 
     for(int i = 0; i < m_model.meshCount; i++) {
         Material& mat = m_model.materials[m_model.meshMaterial[i]];
 
-        const MeshAttrib& mesh_attr = (i < m_mesh_attribs.size())
+        const MeshAttrib& mesh_attr = ((size_t)i < m_mesh_attribs.size())
             ? m_mesh_attribs[i] : MeshAttrib{};
 
         if(mesh_attr.render_backface) {
@@ -89,7 +95,7 @@ void AM::Renderable::render_instanced(Matrix* transforms, size_t size) {
     for(int i = 0; i < m_model.meshCount; i++) {
         Material& mat = m_model.materials[m_model.meshMaterial[i]];
 
-        const MeshAttrib& mesh_attr = (i < m_mesh_attribs.size())
+        const MeshAttrib& mesh_attr = ((size_t)i < m_mesh_attribs.size())
             ? m_mesh_attribs[i] : MeshAttrib{};
 
         if(mesh_attr.render_backface) {

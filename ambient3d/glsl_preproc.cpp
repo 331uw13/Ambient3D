@@ -110,7 +110,7 @@ std::string AM::GLSL_preproc(std::string code, int flags) {
         code.insert(version_end+1, ::RENDER_INSTANCED_STR);
     } 
 
-    printf("%s\n", code.c_str());
+    //printf("%s\n", code.c_str());
 
     return code;
 }

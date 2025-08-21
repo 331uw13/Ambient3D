@@ -10,6 +10,9 @@
 namespace AM {
 
     struct MeshAttrib {
+
+        // TODO: Move 'mesh_index' here.
+
         // NOTE: This only works with shader programs
         //       which implement wind in their vertex shaders.
         bool affected_by_wind   { false };

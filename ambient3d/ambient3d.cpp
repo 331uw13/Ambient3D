@@ -11,12 +11,12 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
     SetExitKey(KEY_NULL);
 
     SetTargetFPS(1000);
-    SetTraceLogLevel(LOG_ALL);
     DisableCursor();
 
     GLSL_preproc_add_meminclude("GLSL_VERSION", "#version 430\n");
     GLSL_preproc_add_meminclude("AMBIENT3D_LIGHTS", I_Shaders::LIGHTS_GLSL);
 
+    SetTraceLogLevel(LOG_ALL);
 
     // DEFAULT
     this->add_shader(LoadShaderFromMemory(
@@ -57,6 +57,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
                 ));  
 
 
+    SetTraceLogLevel(LOG_NONE);
 
     // Create rendering targets.
 
@@ -73,7 +74,6 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
         = LoadRenderTexture(win_width, win_height);
 
 
-    printf("---------- Create Bloom Samples ----------\n");
     
     int sample_res_X = win_width;
     int sample_res_Y = win_height;
@@ -89,9 +89,9 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
 
     }
     
-    printf("-----------------------------------------\n");
 
 
+    SetTraceLogLevel(LOG_ALL);
 
     m_lights_ubo.create(1, { 
             UBO_ELEMENT {
@@ -109,7 +109,9 @@ AM::State::~State() {
     }
 
     m_lights_ubo.free();
-   
+
+
+    SetTraceLogLevel(LOG_NONE);
     // Unload render targets.
     for(size_t i = 0; i < m_render_targets.size(); i++) {
         UnloadRenderTexture(m_render_targets[i]);
@@ -117,6 +119,8 @@ AM::State::~State() {
     for(size_t i = 0; i < m_bloom_samples.size(); i++) {
         UnloadRenderTexture(m_bloom_samples[i]);
     }
+    SetTraceLogLevel(LOG_ALL);
+
     CloseWindow();
 }
 
@@ -331,7 +335,7 @@ void AM::State::m_render_bloom() {
             );
 }
 
-
+/*
 static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool invert) {
     DrawTexturePro(tex,
             (Rectangle){
@@ -342,7 +346,7 @@ static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool inve
             },
             (Vector2){ -X, Y }, 0, WHITE);
 }
-
+*/
 void AM::State::frame_end() {
     EndMode3D();
     this->draw_info();
