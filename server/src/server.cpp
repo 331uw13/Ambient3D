@@ -15,9 +15,9 @@ AM::Server::~Server() {
 
 void AM::Server::start(asio::io_context& io_context) {
 
-    printf("Listening on port %i ...\n", m_port);
+    m_udp_handler.start();
 
-    _do_accept_TCP();
+    m_do_accept_TCP();
 
     // Start the event handler.
     std::thread event_handler([](asio::io_context& context) {
@@ -37,23 +37,52 @@ void AM::Server::start(asio::io_context& io_context) {
     event_handler.join();
 }
 
+            
+void AM::Server::remove_client(const Client& client) {
+    this->tcp_clients_mtx.lock();
+    bool found = false;
+    size_t i = 0;
+    for(; i < this->tcp_clients.size(); i++) {
+        if(client->uuid.equals(this->tcp_clients[i]->uuid)) {
+            found = true;
+            break;
+        }
+    }
 
-void AM::Server::_do_accept_TCP() {
+    if(found) {
+        this->tcp_clients.erase(this->tcp_clients.begin() + i);
+    }
+
+    this->tcp_clients_mtx.unlock();
+}
+
+void AM::Server::m_do_accept_TCP() {
     
     // Context will call this lambda when connection arrives.
     m_tcp_acceptor.async_accept(
-            [this](std::error_code ec, tcp::socket socket){
+            [this](std::error_code ec, tcp::socket socket) {
                 printf("ACCEPT\n");
 
                 if(!ec) {
-                    std::make_shared<TCP_session>(std::move(socket))->start();
+                    this->tcp_clients_mtx.lock();
+                    
+                    this->tcp_clients.push_back(std::make_shared<TCP_session>(std::move(socket), this));
+                    const Client client = this->tcp_clients.back();
+                    client->start();
+
+                    printf("UUID: ");
+                    fflush(stdout);
+                    for(size_t i = 0; i < AM::UUID_LENGTH; i++) {
+                        printf("%x", client->uuid[i]);
+                    }
+                    printf("\n");
+
+                    this->tcp_clients_mtx.unlock();
                 }
 
-                _do_accept_TCP();
+                m_do_accept_TCP();
             });
 }
-
-
 
 
 void AM::Server::m_userinput_handler_th__func() {
@@ -67,6 +96,16 @@ void AM::Server::m_userinput_handler_th__func() {
 
         if(input == "end") {
             m_threads_exit = true;
+        }
+        else
+        if(input == "send_test") {
+            printf("Command is not implemented yet.\n");
+        }
+        else
+        if(input == "online") {
+            this->tcp_clients_mtx.lock();
+            printf("Online players: %li\n", this->tcp_clients.size());
+            this->tcp_clients_mtx.unlock();
         }
         else {
             printf(" Unknown command.\n");

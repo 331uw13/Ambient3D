@@ -3,8 +3,10 @@ CXX = g++
 
 TARGET_NAME = ambient3d-server
 
-SRC = $(shell find ./src -type f -name *.cpp)
 SHARED = ../shared/
+
+SRC = $(shell find ./src -type f -name *.cpp)
+SRC += $(shell find $(SHARED) -type f -name *.cpp)
 OBJS = $(SRC:.cpp=.o)
 
 all: $(TARGET_NAME)

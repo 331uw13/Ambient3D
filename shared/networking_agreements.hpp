@@ -12,7 +12,7 @@ namespace TCP_PROTO {
 
 
 namespace UDP_PROTO {
-    // UDP NOT IMPLEMENTED YET
+    static constexpr uint32_t MAX_PACKET_SIZE = 512;
 };
 
 

@@ -13,10 +13,16 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
     SetTargetFPS(1000);
     DisableCursor();
 
+
+
     GLSL_preproc_add_meminclude("GLSL_VERSION", "#version 430\n");
     GLSL_preproc_add_meminclude("AMBIENT3D_LIGHTS", I_Shaders::LIGHTS_GLSL);
 
     SetTraceLogLevel(LOG_ALL);
+
+
+    // TODO: Adding shaders to the vector like this
+    // may be not ideal, bugs may happen where the index is not matching.
 
     // DEFAULT
     this->add_shader(LoadShaderFromMemory(
@@ -60,6 +66,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
     SetTraceLogLevel(LOG_NONE);
 
     // Create rendering targets.
+    // TODO: Move to separate function.-
 
     m_render_targets[RenderTargetIDX::RESULT]
         = LoadRenderTexture(win_width, win_height);
@@ -74,6 +81,9 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
         = LoadRenderTexture(win_width, win_height);
 
 
+
+    // Create bloom samples.
+    // TODO: Move to separate function-
     
     int sample_res_X = win_width;
     int sample_res_Y = win_height;
@@ -92,6 +102,8 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
 
 
     SetTraceLogLevel(LOG_ALL);
+
+    // TODO: Create memory include for light glsl (for number of lights)
 
     m_lights_ubo.create(1, { 
             UBO_ELEMENT {
@@ -124,6 +136,15 @@ AM::State::~State() {
     CloseWindow();
 }
 
+void AM::State::set_mouse_enabled(bool enabled) {
+    m_mouse_enabled = enabled;
+    if(enabled) {
+        DisableCursor();
+    }
+    else {
+        EnableCursor();
+    }
+}
 
 void AM::State::add_shader(const Shader& shader) {
     if(!IsShaderValid(shader)) {
@@ -257,6 +278,12 @@ void AM::State::draw_info() {
     text_y += y_add;
     draw_text(font_size, TextFormat("OnGround = %s", this->player.on_ground ? "Yes" : "No"),
             text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("MovmentEnabled = %s", m_movement_enabled ? "Yes" : "No"),
+            text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("MouseEnabled = %s", m_mouse_enabled ? "Yes" : "No"),
+            text_x, text_y, WHITE);
 
 }
 
@@ -268,10 +295,12 @@ void AM::State::frame_begin() {
 
     // TODO: Move these.
     //       User may need better control.
-    if(this->mouse_captured) {
+    if(m_mouse_enabled) {
         this->player.update_camera();
     }
-    this->player.update_movement(this);
+    if(m_movement_enabled) {
+        this->player.update_movement(this);
+    }
     this->update_lights();
     this->terrain.find_new_chunks(
             this->player.chunk_x,
@@ -287,8 +316,6 @@ void AM::State::m_render_bloom() {
             this,
             /* TO */   m_bloom_samples[0],
             /* FROM */ m_render_targets[RenderTargetIDX::RESULT],
-            -1, -1,
-            -1, -1, 
             ShaderIDX::BLOOM_TRESHOLD
             );
 
@@ -302,8 +329,6 @@ void AM::State::m_render_bloom() {
                 this,
                 /* TO */   m_bloom_samples[i],
                 /* FROM */ m_bloom_samples[p],
-                -1, -1,
-                -1, -1, 
                 ShaderIDX::BLOOM_DOWNSAMPLE_FILTER
                 );
     }
@@ -316,8 +341,6 @@ void AM::State::m_render_bloom() {
                 this,
                 /* TO */   m_bloom_samples[i],
                 /* FROM */ m_bloom_samples[p],
-                -1, -1,
-                -1, -1, 
                 ShaderIDX::BLOOM_UPSAMPLE_FILTER
                 );
     }
@@ -329,8 +352,6 @@ void AM::State::m_render_bloom() {
             this,
             /* TO */   m_render_targets[RenderTargetIDX::BLOOM_RESULT],
             /* FROM */ m_bloom_samples[1],
-            -1, -1,
-            -1, -1, 
             -1
             );
 }
@@ -349,7 +370,6 @@ static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool inve
 */
 void AM::State::frame_end() {
     EndMode3D();
-    this->draw_info();
     EndTextureMode();
 
 
@@ -377,15 +397,9 @@ void AM::State::frame_end() {
 
     EndShaderMode();
 
-
-    //_draw_tex(m_render_targets[RenderTargetIDX::RESULT].texture, GetScreenWidth()*0.5, 0, 0.5, true);
-    //_draw_tex(m_render_targets[RenderTargetIDX::BLOOM_TRESHOLD].texture, 0, 0, 0.5, true);
-    //_draw_tex(m_render_targets[RenderTargetIDX::BLOOM_RESULT].texture, 0, -50, 1.0, true);
     
-    //_draw_tex(m_bloom_samples[2].texture, 0, -50, 0.9, true);
-    
-    //_draw_tex(m_bloom_samples[m_bloom_samples.size()-1].texture, 0, -300, 3.0, true);
-   
+    this->chatbox.render(&this->font, 18);
+    this->draw_info();
 
     EndDrawing();
 }

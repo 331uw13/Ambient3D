@@ -38,9 +38,13 @@ namespace AMutil {
             AM::State* st,
             RenderTexture2D to,
             RenderTexture2D from,
-            int src_width, int src_height,
-            int dst_width, int dst_height,
-            int shader_idx 
+            int shader_idx,
+
+            int src_width = -1,
+            int src_height = -1,
+
+            int dst_width = -1,
+            int dst_height = -1
             );
 };
 

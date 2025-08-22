@@ -16,9 +16,6 @@
 #include "glsl_preproc.hpp"
 #include "util.hpp"
 
-
-// TODO: Make networking optional to use ?
-
 #include "network/network.hpp"
 
 
@@ -27,6 +24,9 @@ namespace AM {
 
     static constexpr int NUM_BLOOM_SAMPLES = 16;
     static constexpr int MAX_LIGHTS = 64;
+
+    static constexpr int CHAT_KEY = KEY_ENTER;
+
 
     enum ShaderIDX : int {
         DEFAULT,
@@ -47,6 +47,7 @@ namespace AM {
             Font     font;
             Player   player;
             Terrain  terrain;
+            Chatbox  chatbox;
 
             void    frame_begin();
             void    frame_end();
@@ -66,12 +67,19 @@ namespace AM {
             // and it gets stronger towards 1.0
             void    set_vision_effect(float amount);
 
-            bool mouse_captured { true };
+
+            void    set_mouse_enabled(bool enabled);
+            bool    is_mouse_enabled() { return m_mouse_enabled; }
+
+            void    set_movement_enabled(bool enabled) { m_movement_enabled = enabled; }
+            bool    is_movement_enabled() { return m_movement_enabled; }
 
 
         private:
-
-            bool m_connected_to_server;
+            bool m_mouse_enabled          { true };
+            bool m_movement_enabled       { true };
+            bool m_connected_to_server    { false };
+            bool m_is_chat_open           { false };
 
             enum RenderTargetIDX : int {
                 RESULT,

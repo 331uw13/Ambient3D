@@ -11,28 +11,34 @@
 #include "networking_agreements.hpp"
 
 #include "tcp_session.hpp"
-#include "udp_session.hpp"
+#include "udp_handler.hpp"
 
 
 using namespace asio::ip;
 
+typedef std::shared_ptr<AM::TCP_session> Client;
+
 
 namespace AM {
+
     class Server {
         public:
 
-            Server(asio::io_context& context, uint16_t port)
-                : m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), port)) {
-                m_port = port;
-            }
+            Server(asio::io_context& context, uint16_t tcp_port, uint16_t udp_port) :
+                m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), tcp_port)),
+                m_udp_handler(context, udp_port) {}
 
             ~Server();
 
             void start(asio::io_context& io_context);
 
+            std::mutex          tcp_clients_mtx;
+            std::vector<Client> tcp_clients; 
+
+            void remove_client(const Client& client);
 
         private:
-            uint16_t m_port { 0 };
+
             std::atomic<bool> m_threads_exit { false };
 
             void         m_userinput_handler_th__func();
@@ -40,12 +46,11 @@ namespace AM {
 
             // TCP is used for chat.
             tcp::acceptor m_tcp_acceptor;
+            void          m_do_accept_TCP();
 
-            void _do_accept_TCP();
 
-            // TODO:
-            // UDP protocol is used for gameplay packets.
-
+            // UDP is used for gameplay packets.
+            UDP_handler m_udp_handler;
     };
 };
 

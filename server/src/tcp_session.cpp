@@ -1,48 +1,50 @@
-#include <iostream>
+#include <cstdio>
 
 #include "tcp_session.hpp"
 #include "networking_agreements.hpp"
 
+#include "server.hpp"
 
-
+AM::TCP_session::TCP_session(tcp::socket socket, AM::Server* server) 
+    : m_socket(std::move(socket)), m_server(server)
+{
+    this->uuid.generate();
+}
 
 void AM::TCP_session::m_do_read() {
+    
+    memset(m_data, 0, TCP_PROTO::MAX_PACKET_SIZE);
 
-    auto self(shared_from_this());
+    const std::shared_ptr<TCP_session>& self(shared_from_this());
     m_socket.async_read_some(asio::buffer(m_data, TCP_PROTO::MAX_PACKET_SIZE),
             [this, self](std::error_code ec, std::size_t size) {
-                if(!ec) {
-                    printf("\033[33m<-\033[0m \"%s\"\n", m_data);
-                    m_do_write();
+                if(ec) {
+                    printf("[read_tcp](%i): %s\n", ec.value(), ec.message().c_str());
+                    m_server->remove_client(std::move(self));
+                    return;
                 }
-                else {
-                    std::cout << "[read]("<< ec.value() <<"): " << ec.message() << std::endl;
-                }
+                printf("\033[33m (TCP) <-\033[0m \"%s\"\n", m_data);
+                
+                this->write("got your msg");
             });
 
 }
 
 
-void AM::TCP_session::m_do_write() {
-
-    std::string msg = "Hello client.";
+void AM::TCP_session::write(const std::string& msg) {
 
     auto self(shared_from_this());
     asio::async_write(m_socket, asio::buffer(msg.c_str(), msg.size()),
             [this, self, msg](std::error_code ec, std::size_t /*size*/) {
-                if(!ec) {
-                    printf("\033[32m->\033[0m \"%s\"\n", msg.c_str());
-                    m_do_read();
+                if(ec) {
+                    printf("[write_tcp](%i): %s\n", ec.value(), ec.message().c_str());
+                    m_server->remove_client(std::move(self));
+                    return;
                 }
-                else {
-                    std::cout << "[write]("<< ec.value() <<"): " << ec.message() << std::endl;
-                }
+                printf("\033[32m (TCP) ->\033[0m \"%s\"\n", msg.c_str());
+                
+                m_do_read();
             });
-
 }
-
-
-
-
 
 

@@ -61,9 +61,9 @@ void AMutil::resample_texture(
         AM::State* st,
         RenderTexture2D to,
         RenderTexture2D from,
+        int shader_idx,
         int src_width, int src_height,
-        int dst_width, int dst_height,
-        int shader_idx
+        int dst_width, int dst_height
 ){
     BeginTextureMode(to);
     ClearBackground(Color(0, 0, 0, 0));

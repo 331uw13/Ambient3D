@@ -11,7 +11,13 @@ int main() {
 
     asio::io_context io_context;
 
-    AM::Server server(io_context, 34480);
+    const uint16_t tcp_port = 34480;
+    const uint16_t udp_port = 34485;
+
+    printf("Listening on port (tcp = %i), (udp = %i)\n",
+            tcp_port, udp_port);
+
+    AM::Server server(io_context, tcp_port, udp_port);
     server.start(io_context);
 
 
