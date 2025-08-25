@@ -21,13 +21,14 @@ namespace AM {
 
         private:
 
+            void m_handle_received_packet(size_t sizeb);
             void m_do_read();
             void m_do_write();
 
             udp::endpoint m_sender_endpoint;
             udp::socket m_socket;
 
-            char m_data[UDP_PROTO::MAX_PACKET_SIZE];
+            char m_data[AM::MAX_PACKET_SIZE];
 
     };
 

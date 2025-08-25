@@ -32,7 +32,7 @@ AM::Player::~Player() {
 }
  
 
-void AM::Player::update_movement(State* st) {
+void AM::Player::update_movement(State* st, bool handle_user_input) {
     const float dt = GetFrameTime();
     Vector3 cam_dir = Vector3(
                 cos(this->cam_pitch) * sin(this->cam_yaw),
@@ -59,39 +59,42 @@ void AM::Player::update_movement(State* st) {
 
     speed *= dt;
 
-    if(IsKeyDown(KEY_W)) {
-        this->movement.x -= this->forward.x * speed;
-        this->movement.z -= this->forward.z * speed;
-        if(this->noclip) {
-            this->movement.y += cam_dir.y * speed;
+    if(handle_user_input) {
+        if(IsKeyDown(KEY_W)) {
+            this->movement.x -= this->forward.x * speed;
+            this->movement.z -= this->forward.z * speed;
+            if(this->noclip) {
+                this->movement.y += cam_dir.y * speed;
+            }
         }
-    }
-    else
-    if(IsKeyDown(KEY_S)) {
-        this->movement.x += this->forward.x * speed;
-        this->movement.z += this->forward.z * speed;
-        if(this->noclip) {
-            this->movement.y -= cam_dir.y * speed;
+        else
+        if(IsKeyDown(KEY_S)) {
+            this->movement.x += this->forward.x * speed;
+            this->movement.z += this->forward.z * speed;
+            if(this->noclip) {
+                this->movement.y -= cam_dir.y * speed;
+            }
         }
-    }
-    if(IsKeyDown(KEY_D)) {
-        this->movement.x += right.x * speed;
-        this->movement.z += right.z * speed;
-    }
-    else
-    if(IsKeyDown(KEY_A)) {
-        this->movement.x -= right.x * speed;
-        this->movement.z -= right.z * speed;
+        if(IsKeyDown(KEY_D)) {
+            this->movement.x += right.x * speed;
+            this->movement.z += right.z * speed;
+        }
+        else
+        if(IsKeyDown(KEY_A)) {
+            this->movement.x -= right.x * speed;
+            this->movement.z -= right.z * speed;
+        }
     }
 
     if(!this->noclip) {
-        if(IsKeyPressed(KEY_SPACE)) {
+        if(handle_user_input && IsKeyPressed(KEY_SPACE)) {
             this->jump();
         }
         m_update_gravity(st);
         m_update_slide();
     }
-    else {
+    else 
+    if(handle_user_input) {
         if(IsKeyDown(KEY_SPACE)) {
             this->movement.y += speed;
         }
@@ -202,4 +205,5 @@ void AM::Player::update_camera() {
     
     AMutil::clamp<float>(this->cam_pitch, -1.5f, 1.5f);
 }
+            
 

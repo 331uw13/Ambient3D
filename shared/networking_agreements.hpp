@@ -4,16 +4,12 @@
 #include <cstdint>
 
 
-
-namespace TCP_PROTO {
-    static constexpr uint32_t MAX_PACKET_SIZE = 1024;
+namespace AM {
     
+    static constexpr int PACKET_DATA_SEPARATOR = 0x1F;
+    static constexpr int PACKET_DATA_STOP = 0x3;
+    static constexpr size_t MAX_PACKET_SIZE = 1024;
+
 };
-
-
-namespace UDP_PROTO {
-    static constexpr uint32_t MAX_PACKET_SIZE = 512;
-};
-
 
 #endif

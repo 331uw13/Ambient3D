@@ -12,6 +12,7 @@ using namespace asio::ip;
 
 // From '../../shared'
 #include "networking_agreements.hpp"
+#include "packet_ids.hpp"
 #include "uuid.hpp"
 
 
@@ -25,7 +26,7 @@ namespace AM {
             UUID uuid;
             
             void start() { m_do_read(); }
-            void write(const std::string& msg);
+            void write(AM::PacketID packet_id, const std::string& msg);
 
 
         private:
@@ -38,7 +39,12 @@ namespace AM {
             tcp::socket  m_socket;
             Server*      m_server;
 
-            char m_data[TCP_PROTO::MAX_PACKET_SIZE];
+            void m_handle_received_packet(size_t sizeb);
+            char m_data[AM::MAX_PACKET_SIZE]; // <- Received data. (TODO: Should probably rename.)
+            
+            // Used for sending data.
+            char   m_packet_data[AM::MAX_PACKET_SIZE];
+            size_t m_packet_size { 0 };
     };
 };
 

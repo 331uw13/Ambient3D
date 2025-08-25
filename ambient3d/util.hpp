@@ -14,9 +14,9 @@ namespace AM {
 
 namespace AMutil {
 
-    float normalize(float t, float min, float max);
-    float lerp(float t, float min, float max);
-    float map(float t, float src_min, float src_max, float dst_min, float dst_max);
+    float  normalize(float t, float min, float max);
+    float  lerp(float t, float min, float max);
+    float  map(float t, float src_min, float src_max, float dst_min, float dst_max);
     int    randomi(int min, int max, int64_t* seed);
     float  randomf(float min, float max, int64_t* seed);
 

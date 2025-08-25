@@ -23,13 +23,11 @@ namespace AM {
 
     class Terrain {
         public:
-            //==== Public Variables ====
            
             std::map<IVector2, Chunk>  chunks;
             std::mutex                 chunks_mutex;
             
 
-            //==== Public Functions ====
 
             void start_generator();
             void stop_generator();

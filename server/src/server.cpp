@@ -70,19 +70,30 @@ void AM::Server::m_do_accept_TCP() {
                     const Client client = this->tcp_clients.back();
                     client->start();
 
-                    printf("UUID: ");
-                    fflush(stdout);
+                    char uuid_buf[AM::UUID_LENGTH * 4] = { 0 };
                     for(size_t i = 0; i < AM::UUID_LENGTH; i++) {
-                        printf("%x", client->uuid[i]);
+                        snprintf(&uuid_buf[i], 3, "%x", client->uuid[i]);
                     }
-                    printf("\n");
 
+
+                    printf("UUID: %s\n", uuid_buf);
                     this->tcp_clients_mtx.unlock();
                 }
 
                 m_do_accept_TCP();
             });
 }
+            
+void AM::Server::broadcast_tcp(const std::string& str) {
+    this->tcp_clients_mtx.lock();
+    
+    for(size_t i = 0; i < this->tcp_clients.size(); i++) {
+        this->tcp_clients[i]->write(AM::PacketID::CHAT_MESSAGE, str);
+    }
+
+    this->tcp_clients_mtx.unlock();
+}
+
 
 
 void AM::Server::m_userinput_handler_th__func() {
@@ -98,8 +109,9 @@ void AM::Server::m_userinput_handler_th__func() {
             m_threads_exit = true;
         }
         else
-        if(input == "send_test") {
-            printf("Command is not implemented yet.\n");
+        if(input == "clear") {
+            printf("\033[2J\033[H");
+            fflush(stdout);
         }
         else
         if(input == "online") {
@@ -116,6 +128,5 @@ void AM::Server::m_userinput_handler_th__func() {
     // NOTE: When the above while loop is exited.
     //       The server will shutdown.
 }
-
 
 

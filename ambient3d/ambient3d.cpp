@@ -3,8 +3,7 @@
 #include "util.hpp"
 
 
-AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
-
+AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM::NetConnectCFG network_cfg) {
     // Initialize raylib.
     
     InitWindow(win_width, win_height, title);
@@ -112,6 +111,21 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title) {
             UBO_ELEMENT {
                 .num = 1, .elem_sizeb = 4
             }});
+
+
+
+    // Initialize network.
+
+    this->register_gui_module<AM::Chatbox>(GuiModuleID::CHATBOX, AM::GuiModule::RenderOPT::ALWAYS);
+    AM::Chatbox* chatbox = this->find_gui_module<AM::Chatbox>(GuiModuleID::CHATBOX);
+
+    network_cfg.msg_recv_callback 
+        = [chatbox](uint8_t r, uint8_t g, uint8_t b, const std::string& str)
+        { chatbox->push_message(r, g, b, str); };
+
+    this->net = new AM::Network(m_asio_io_context, network_cfg);
+
+
 }
 
 AM::State::~State() {
@@ -133,6 +147,8 @@ AM::State::~State() {
     }
     SetTraceLogLevel(LOG_ALL);
 
+    this->net->close(m_asio_io_context);
+    delete this->net;
     CloseWindow();
 }
 
@@ -287,25 +303,65 @@ void AM::State::draw_info() {
 
 }
 
-            
+        
 void AM::State::frame_begin() {
     BeginTextureMode(m_render_targets[RenderTargetIDX::RESULT]);
     ClearBackground(BLACK);
     BeginMode3D(this->player.cam);
+
+    m_fixed_tick_internal();
+    m_update_gui_module_inputs();
+
 
     // TODO: Move these.
     //       User may need better control.
     if(m_mouse_enabled) {
         this->player.update_camera();
     }
-    if(m_movement_enabled) {
-        this->player.update_movement(this);
-    }
+    this->player.update_movement(this, m_movement_enabled);
+
     this->update_lights();
     this->terrain.find_new_chunks(
             this->player.chunk_x,
             this->player.chunk_z, 16);
 
+}
+            
+void AM::State::m_fixed_tick_internal() {
+    m_fixed_tick_timer += GetFrameTime();
+    if(m_fixed_tick_timer > m_fixed_tick_speed) {
+        m_fixed_tick_timer = 0;
+        
+
+        net->prepare_packet(AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
+        net->write_float({
+                this->player.pos.x,
+                this->player.pos.y,
+                this->player.pos.z,
+                this->player.cam_yaw,
+                this->player.cam_pitch
+                });
+        net->send_packet(AM::NetProto::UDP);
+
+
+        if(m_fixed_tick_callback_set) {
+            m_fixed_tick_callback(this);
+        }
+    }
+}
+
+void AM::State::m_update_gui_module_inputs() {
+    if(m_focused_gui_module_idx < 0) {
+        return;
+    }
+
+    auto& module_ = m_gui_modules[m_focused_gui_module_idx];
+    if(!module_->has_focus) {
+        m_focused_gui_module_idx = -1;
+        return;
+    }
+
+    module_->module__key_input(GetCharPressed());
 }
 
 
@@ -397,11 +453,51 @@ void AM::State::frame_end() {
 
     EndShaderMode();
 
-    
-    this->chatbox.render(&this->font, 18);
+
+    // Render GuiModules.
+    for(size_t i = 0; i < m_gui_modules.size(); i++) {
+        switch(m_gui_modules[i]->get_render_option()) {
+            case GuiModule::RenderOPT::WHEN_FOCUSED:
+                if(m_gui_modules[i]->has_focus) {
+                    m_gui_modules[i]->module__render(&this->font);
+                }
+                break;
+            case GuiModule::RenderOPT::ALWAYS:
+                m_gui_modules[i]->module__render(&this->font);
+                break;
+        }
+    }
+
     this->draw_info();
 
     EndDrawing();
+}
+
+ 
+void AM::State::set_gui_module_focus(int module_id, AM::GuiModuleFocus focus_option) {
+    m_focused_gui_module_idx = -1;
+
+    for(size_t i = 0; i < m_gui_modules.size(); i++) {
+        
+        if(module_id == m_gui_modules[i]->get_id()) {
+            switch(focus_option) {
+                case GuiModuleFocus::GAIN:
+                    m_gui_modules[i]->has_focus = true;
+                    break;
+                case GuiModuleFocus::LOSE:
+                    m_gui_modules[i]->has_focus = true;
+                    break;
+                case GuiModuleFocus::TOGGLE:
+                    m_gui_modules[i]->has_focus = !m_gui_modules[i]->has_focus;
+                    break;
+            }
+            m_focused_gui_module_idx = i;
+        }
+        else {
+            m_gui_modules[i]->has_focus = false;
+        }
+        
+    }
 }
 
 

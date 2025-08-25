@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 
 #include "server.hpp"
 
@@ -6,7 +7,6 @@
 
 
 int main() {
-    
     printf("Ambient3D - Server\n");
 
     asio::io_context io_context;
@@ -19,8 +19,6 @@ int main() {
 
     AM::Server server(io_context, tcp_port, udp_port);
     server.start(io_context);
-
-
 
     return 0;
 }

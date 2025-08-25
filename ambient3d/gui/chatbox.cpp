@@ -14,15 +14,19 @@ namespace {
 
 };
 
+/*
+void AM::Chatbox::GuiModule::module__render(Font* font) {
+    printf("RENDERING GUI MODULE! %ix%i\n", width, 0);
+}
+*/
+void AM::Chatbox::module__render(Font* font) {  
 
-
-void AM::Chatbox::render(Font* font, int font_size) {
-    
-    int win_width = GetScreenWidth();
+    int font_size = 20;
+    //int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
 
     int this_x = 10;
-    int this_y = (win_height - this->height) - 10;
+    int this_y = (win_height - this->height) - 30;
 
     DrawRectangle(this_x, this_y, this->width, this->height, ::CHAT_BG_COLOR);
 
@@ -60,15 +64,30 @@ void AM::Chatbox::render(Font* font, int font_size) {
 
         text_y_offset += font_size+2;
     }
+
+    // Draw text inputs.
+    DrawTextEx(*font, 
+            this->text_input.c_str(), 
+            Vector2(paddnX, this_y + this->height),
+            (float)font_size,
+            0.8f,
+            WHITE
+            );
+
+
+
+}
+ 
+void AM::Chatbox::module__key_input(int key) {
+    if(key >= 0x20 && key <= 0x7E) { 
+        this->text_input.push_back(key);
+    }
 }
 
-            
-
-void AM::Chatbox::push_message(const Color& color, const std::string& msg) {
+void AM::Chatbox::push_message(uint8_t red, uint8_t grn, uint8_t blu, const std::string& msg) {
     if(msg.empty()) { return; }
 
-    m_msg_buffer.push_back(ChatMsg{ color, msg });
-    //m_msg_buffer.insert(m_msg_buffer.begin(), ChatMsg{ color, msg });
+    m_msg_buffer.push_back(ChatMsg{ Color(red, grn, blu, 255), msg });
     // TODO: Make sure the chat buffer memory doesnt grow too big.
 }
 

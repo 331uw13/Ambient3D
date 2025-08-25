@@ -36,7 +36,7 @@ namespace AM {
             std::vector<Client> tcp_clients; 
 
             void remove_client(const Client& client);
-
+            void broadcast_tcp(const std::string& str);
         private:
 
             std::atomic<bool> m_threads_exit { false };

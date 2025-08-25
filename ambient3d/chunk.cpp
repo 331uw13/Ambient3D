@@ -93,7 +93,7 @@ void AM::Chunk::load(int chunk_x, int chunk_z) {
     Vector3 vC(0, 0, 0);
 
     int v_counter = 0; // Count vertices.
-    int n_counter = 0; // Count normals.
+    //int n_counter = 0; // Count normals.
     int tc_counter = 0; // Count texcoords.
 
     for(int z = 0; z < CHUNK_SIZE; z++) {

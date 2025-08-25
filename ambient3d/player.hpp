@@ -12,7 +12,6 @@ namespace AM {
             Player();
             ~Player();
             
-            //==== Public Variables ====
             Camera   cam;
             Vector3  pos { 0, 0, 0 };
             Vector3  vel { 0, 0, 0 }; // Velocity.
@@ -33,19 +32,17 @@ namespace AM {
             int8_t   num_jumps_in_air { 0 };
             Vector3  terrain_normal { 0, 0, 0 };
 
-            //==== Public Functions ====
-            void update_movement(State* st);
+
+            void update_movement(State* st, bool handle_user_input = true);
             void update_camera();
 
             void jump();
 
         private:
 
-            //==== Private Functions ====
             void m_update_gravity(State* st);
             void m_update_slide();
-  
-            //==== Private Variables ====
+
             float m_slide_boost { false };
             bool m_jumped { false };
             int  m_num_jumps_left { 0 };

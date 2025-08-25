@@ -38,16 +38,25 @@ namespace AM {
         // ...
     };
 
+    enum GuiModuleFocus {
+        GAIN,
+        LOSE,
+        TOGGLE
+    };
 
     class State {
         public:
-            State(uint16_t win_width, uint16_t win_height, const char* title);
+            State(uint16_t win_width, uint16_t win_height,
+                    const char* title,  AM::NetConnectCFG network_cfg);
+
             ~State();
 
             Font     font;
             Player   player;
             Terrain  terrain;
-            Chatbox  chatbox;
+
+            Network* net;
+
 
             void    frame_begin();
             void    frame_end();
@@ -62,6 +71,27 @@ namespace AM {
             void    draw_info();
             void    draw_text(int font_size, const char* text, int x, int y, const Color& color);
 
+            template<class MODULE>
+            void register_gui_module(
+                    AM::GuiModuleID module_id, // User chosen ID.
+                    AM::GuiModule::RenderOPT render_option
+            ){
+                m_gui_modules.push_back(
+                        std::make_unique<MODULE>(MODULE(module_id, render_option)));
+            }
+
+            template<class MODULE>
+            MODULE* find_gui_module(AM::GuiModuleID module_id) {
+                for(size_t i = 0; i < m_gui_modules.size(); i++) {
+                    if(m_gui_modules[i]->get_id() == module_id) {
+                        return dynamic_cast<MODULE*>(m_gui_modules[i].get());
+                    }
+                }
+                return NULL;
+            }
+
+            void    set_gui_module_focus(int module_id, GuiModuleFocus focus_option);
+
             // When amount is close to 0.0 small distortions happen
             // but when it reaches 0.5 "blinking" starts happening
             // and it gets stronger towards 1.0
@@ -75,11 +105,21 @@ namespace AM {
             bool    is_movement_enabled() { return m_movement_enabled; }
 
 
+            void set_fixed_tick_callback(std::function<void(AM::State*)> callback) {
+                m_fixed_tick_callback = callback;
+                m_fixed_tick_callback_set = true;
+            }
+            void set_fixed_tick_speed(float tick_speed) {
+                m_fixed_tick_speed = tick_speed;
+            }
+
         private:
             bool m_mouse_enabled          { true };
             bool m_movement_enabled       { true };
             bool m_connected_to_server    { false };
             bool m_is_chat_open           { false };
+
+            asio::io_context m_asio_io_context;
 
             enum RenderTargetIDX : int {
                 RESULT,
@@ -90,7 +130,14 @@ namespace AM {
                 NUM_TARGETS
             };
 
+            bool                             m_fixed_tick_callback_set  { false };
+            float                            m_fixed_tick_timer         { 0.0f };
+            float                            m_fixed_tick_speed         { 0.1f };
+            std::function<void(AM::State*)>  m_fixed_tick_callback;
+            void                             m_fixed_tick_internal();
+            void                             m_update_gui_module_inputs();
 
+            // TODO Maybe move this away from State class
             void m_render_bloom();
 
             std::array<RenderTexture2D, RenderTargetIDX::NUM_TARGETS>
@@ -106,8 +153,12 @@ namespace AM {
             std::array<Light*, MAX_LIGHTS> m_light_ptrs { NULL };
             size_t m_num_lights { 0 };
 
-            std::map<int/*light ID*/, Light> m_lights_pframe_map; // Previous frame lights.
-            
+            int64_t                                 m_focused_gui_module_idx { -1 };
+            std::vector<std::unique_ptr<GuiModule>> m_gui_modules;
+            std::map<int/*light ID*/, Light>        m_lights_pframe_map; // Previous frame lights.
+           
+
+
     };
 
 };
