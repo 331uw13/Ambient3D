@@ -5,6 +5,15 @@
 namespace {
     static constexpr Color CHAT_BG_COLOR
         = Color(30, 30, 30, 80);
+    
+    static constexpr Color CHAT_FOCUS_COLOR
+        = Color(80, 200, 80, 200);
+    
+    static constexpr Color CHAT_SEPARATOR_LINE_FOCUSED_COLOR
+        = Color(80, 80, 80, 200);
+    
+    static constexpr Color CHAT_SEPARATOR_LINE_COLOR
+        = Color(50, 50, 50, 200);
 
     static constexpr Color MSG_BG_COLOR_LIGHT
         = Color(50, 50, 50, 100);
@@ -14,11 +23,6 @@ namespace {
 
 };
 
-/*
-void AM::Chatbox::GuiModule::module__render(Font* font) {
-    printf("RENDERING GUI MODULE! %ix%i\n", width, 0);
-}
-*/
 void AM::Chatbox::module__render(Font* font) {  
 
     int font_size = 20;
@@ -28,7 +32,10 @@ void AM::Chatbox::module__render(Font* font) {
     int this_x = 10;
     int this_y = (win_height - this->height) - 30;
 
-    DrawRectangle(this_x, this_y, this->width, this->height, ::CHAT_BG_COLOR);
+    DrawRectangle(this_x, this_y, this->width, this->height+font_size, ::CHAT_BG_COLOR);
+    if(this->has_focus) {
+        DrawRectangleLines(this_x-2, this_y-2, this->width+4, this->height+4+font_size, ::CHAT_FOCUS_COLOR);
+    }
 
     constexpr int paddnX = 10;
     constexpr int paddnY = 5;
@@ -65,10 +72,19 @@ void AM::Chatbox::module__render(Font* font) {
         text_y_offset += font_size+2;
     }
 
+
+    DrawLine(paddnX, 
+             this_y + this->height,
+             paddnX + this->width,
+             this_y + this->height,
+             this->has_focus 
+                ? ::CHAT_SEPARATOR_LINE_FOCUSED_COLOR 
+                : ::CHAT_SEPARATOR_LINE_COLOR);
+
     // Draw text inputs.
     DrawTextEx(*font, 
             this->text_input.c_str(), 
-            Vector2(paddnX, this_y + this->height),
+            Vector2(paddnX+5, this_y + this->height),
             (float)font_size,
             0.8f,
             WHITE
@@ -78,7 +94,7 @@ void AM::Chatbox::module__render(Font* font) {
 
 }
  
-void AM::Chatbox::module__key_input(int key) {
+void AM::Chatbox::module__char_input(int key) {
     if(key >= 0x20 && key <= 0x7E) { 
         this->text_input.push_back(key);
     }

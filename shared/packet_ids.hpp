@@ -22,25 +22,37 @@ namespace AM {
 
         CHAT_MESSAGE, // (tcp only)
 
-        // Server is going to send client their UUID
-        // when they are connected.
-        CLIENT_UUID,  // (tcp only)
-       
+        // Server will send player their id when they are connected (via TCP)
+        // Then the client will reply with their ID via UDP protocol,
+        // that process saves the client's udp endpoint.
+        PLAYER_ID,
+
+        // ^-- After that if successful the server will respond with
+        // this packet via TCP
+        PLAYER_ID_HAS_BEEN_SAVED,
+
+
         // This packet contains the player's requested position in the world.
-        // It also has camera pitch and yaw information.
+        // It also has camera pitch, yaw and animation information.
         // NOTE: The client side position is always a "request" to the server
         // - Format:
         // Byte offset  |  Value name
-        // 0            :  PacketID
-        // 4            :  Player X
-        // 8            :  Player Y
-        // 12           :  Player Z
-        // 16           :  Camera Yaw
-        // 20           :  Camera Pitch
+        // 0            :  Packet ID        (int)
+        // 4            :  Player ID        (int)
+        // 8            :  Player X         (float)
+        // 12           :  Player Y         (float)
+        // 16           :  Player Z         (float)
+        // 20           :  Camera Yaw       (float)
+        // 24           :  Camera Pitch     (float)
+        // 28           :  Animation ID     (int)
         PLAYER_MOVEMENT_AND_CAMERA, // (udp only)
 
+       
+    };
 
-
+    namespace PacketSize {
+        static constexpr size_t PLAYER_MOVEMENT_AND_CAMERA = 28;
+        static constexpr size_t PLAYER_ID = 4;
     };
 };
 

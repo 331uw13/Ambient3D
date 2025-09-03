@@ -319,6 +319,7 @@ void AM::State::frame_begin() {
         this->player.update_camera();
     }
     this->player.update_movement(this, m_movement_enabled);
+    this->player.update_animation();
 
     this->update_lights();
     this->terrain.find_new_chunks(
@@ -331,18 +332,19 @@ void AM::State::m_fixed_tick_internal() {
     m_fixed_tick_timer += GetFrameTime();
     if(m_fixed_tick_timer > m_fixed_tick_speed) {
         m_fixed_tick_timer = 0;
-        
 
-        net->prepare_packet(AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
-        net->write_float({
-                this->player.pos.x,
-                this->player.pos.y,
-                this->player.pos.z,
-                this->player.cam_yaw,
-                this->player.cam_pitch
+
+        AM::packet_prepare(&this->net->packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
+        AM::packet_write_int(&this->net->packet, { this->net->player_id });
+        AM::packet_write_float(&this->net->packet, {
+                    this->player.pos.x,
+                    this->player.pos.y,
+                    this->player.pos.z,
+                    this->player.cam_yaw,
+                    this->player.cam_pitch
                 });
-        net->send_packet(AM::NetProto::UDP);
-
+        AM::packet_write_int(&this->net->packet, { this->player.anim_id });
+        this->net->send_packet(AM::NetProto::UDP);
 
         if(m_fixed_tick_callback_set) {
             m_fixed_tick_callback(this);
@@ -361,7 +363,7 @@ void AM::State::m_update_gui_module_inputs() {
         return;
     }
 
-    module_->module__key_input(GetCharPressed());
+    module_->module__char_input(GetCharPressed());
 }
 
 

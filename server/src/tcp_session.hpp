@@ -11,9 +11,7 @@ using namespace asio::ip;
 
 
 // From '../../shared'
-#include "networking_agreements.hpp"
-#include "packet_ids.hpp"
-#include "uuid.hpp"
+#include "packet_writer.hpp"
 
 
 namespace AM {
@@ -21,19 +19,22 @@ namespace AM {
 
     class TCP_session : public std::enable_shared_from_this<TCP_session> {
         public:
-            TCP_session(tcp::socket socket, AM::Server* server);
+            TCP_session(tcp::socket socket, AM::Server* server, int player_id);
 
-            UUID uuid;
+            Packet packet;
             
+
+
             void start() { m_do_read(); }
-            void write(AM::PacketID packet_id, const std::string& msg);
+            void send_packet();
+            
+            int  player_id;
 
 
         private:
 
             std::vector<std::string> m_write_buffer;
 
-            //void m_do_write(const std::string& msg);
             void m_do_read();
 
             tcp::socket  m_socket;
@@ -42,9 +43,6 @@ namespace AM {
             void m_handle_received_packet(size_t sizeb);
             char m_data[AM::MAX_PACKET_SIZE]; // <- Received data. (TODO: Should probably rename.)
             
-            // Used for sending data.
-            char   m_packet_data[AM::MAX_PACKET_SIZE];
-            size_t m_packet_size { 0 };
     };
 };
 

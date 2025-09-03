@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 
 #include "tcp_session.hpp"
 #include "server.hpp"
@@ -8,10 +10,21 @@
 #include "packet_parser.hpp"
 
 
-AM::TCP_session::TCP_session(tcp::socket socket, AM::Server* server) 
+AM::TCP_session::TCP_session(tcp::socket socket, AM::Server* server, int player_id) 
     : m_socket(std::move(socket)), m_server(server)
 {
-    this->uuid.generate();
+    this->player_id = player_id;
+    /*
+    // Generate UUID for the client.
+    printf("UUID: ");
+    std::srand(std::time({}));
+    for(size_t i = 0; i < AM::UUID_LENGTH-1; i++) {
+        this->uuid[i] = abs((char)(std::rand() % 255));
+        printf("%x", this->uuid[i]);
+    }
+    printf("\n");
+    this->uuid[AM::UUID_LENGTH-1] = 0;
+    */
 }
             
 
@@ -23,8 +36,22 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
 
     switch(packet_id) {
         case AM::PacketID::CHAT_MESSAGE:
-            printf("[CHAT]: %s\n", m_data);
-            m_server->broadcast_tcp(m_data);
+            if(sizeb == 0) { return; }
+            if(sizeb > 512) {
+                fprintf(stderr, "[CHAT_WARNING]: Ignored %li long message.\n", sizeb);
+                return;
+            }
+
+            // Allow only printable ascii characters.
+            // TODO: Good idea is to add support for different languages.
+            for(size_t i = 0; i < sizeb; i++) {
+                if((m_data[i] < 0x20) || (m_data[i] > 0x7E)) {
+                    return;
+                }
+            }
+
+            printf("[CHAT(%li)]: %s\n", sizeb, m_data);
+            m_server->broadcast_tcp_message(m_data);
             break;
 
         // ...
@@ -40,55 +67,33 @@ void AM::TCP_session::m_do_read() {
             [this, self](std::error_code ec, std::size_t size) {
                 if(ec) {
                     printf("[read_tcp](%i): %s\n", ec.value(), ec.message().c_str());
-                    m_server->remove_client(std::move(self));
+                    m_server->remove_player(self->player_id);
                     return;
                 }
                 
                 m_handle_received_packet(size);
                 m_do_read();
-                //this->write("");
             });
 
 }
 
 
-void AM::TCP_session::write(AM::PacketID packet_id, const std::string& msg) {
+void AM::TCP_session::send_packet() {
 
-    /*
-    char id_buffer[4] = { 0 };
-    memmove(id_buffer, &packet_id, sizeof(AM::PacketID));
-    */
-
-    if(msg.size() >= (AM::MAX_PACKET_SIZE-sizeof(AM::PacketID))) {
-        fprintf(stderr, "ERROR! Too much data for TCP packet to write.\n");
+    if(this->packet.status != AM::PacketStatus::HAS_DATA) {
+        fprintf(stderr, "%s: Packet doesnt seem to have any data to be sent.\n",
+                __func__);
         return;
     }
 
-
-    memset(m_packet_data, 0, 
-            (m_packet_size < AM::MAX_PACKET_SIZE) ? m_packet_size : AM::MAX_PACKET_SIZE);
-    m_packet_size = 0;
-
-    // Set the packet id to be first 4 bytes.
-    memmove(m_packet_data, &packet_id, sizeof(AM::PacketID));
-    m_packet_size += sizeof(AM::PacketID);
-    
-
-    // Move rest of the message.
-    memmove(m_packet_data + m_packet_size, &msg[0], msg.size());
-    m_packet_size += msg.size();
-
-
     auto self(shared_from_this());
-    asio::async_write(m_socket, asio::buffer(m_packet_data, m_packet_size),
-            [this, self, msg](std::error_code ec, std::size_t /*size*/) {
+    asio::async_write(m_socket, asio::buffer(this->packet.data, this->packet.size),
+            [this, self](std::error_code ec, std::size_t /*size*/) {
                 if(ec) {
                     printf("[write_tcp](%i): %s\n", ec.value(), ec.message().c_str());
-                    m_server->remove_client(std::move(self));
+                    m_server->remove_player(self->player_id);
                     return;
                 }
-                //printf("\033[32m (TCP) ->\033[0m \"%s\"\n", msg.c_str());
-                //m_do_read();
             });
 }
 

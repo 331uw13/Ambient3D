@@ -15,7 +15,6 @@
 #include "renderable.hpp"
 #include "glsl_preproc.hpp"
 #include "util.hpp"
-
 #include "network/network.hpp"
 
 
@@ -130,16 +129,6 @@ namespace AM {
                 NUM_TARGETS
             };
 
-            bool                             m_fixed_tick_callback_set  { false };
-            float                            m_fixed_tick_timer         { 0.0f };
-            float                            m_fixed_tick_speed         { 0.1f };
-            std::function<void(AM::State*)>  m_fixed_tick_callback;
-            void                             m_fixed_tick_internal();
-            void                             m_update_gui_module_inputs();
-
-            // TODO Maybe move this away from State class
-            void m_render_bloom();
-
             std::array<RenderTexture2D, RenderTargetIDX::NUM_TARGETS>
                 m_render_targets;
 
@@ -147,6 +136,17 @@ namespace AM {
                 m_bloom_samples;
 
 
+            bool                             m_fixed_tick_callback_set  { false };
+            float                            m_fixed_tick_timer         { 0.0f };
+            float                            m_fixed_tick_speed         { 0.075f };
+            std::function<void(AM::State*)>  m_fixed_tick_callback;
+            void                             m_fixed_tick_internal();
+            void                             m_update_gui_module_inputs();
+
+            // TODO Maybe move this away from State class
+            void m_render_bloom();
+
+        
 
             UniformBuffer m_lights_ubo;
             std::array<Light, MAX_LIGHTS> m_lights;

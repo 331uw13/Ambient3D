@@ -31,7 +31,7 @@ namespace AM {
             void push_message(uint8_t red, uint8_t grn, uint8_t blu, const std::string& msg);
 
 
-            void module__key_input(int key) override;
+            void module__char_input(int key) override;
             void module__render(Font* font) override;
 
             std::string text_input;

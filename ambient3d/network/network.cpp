@@ -8,8 +8,10 @@
 
 
 void AM::Network::m_handle_tcp_packet(size_t sizeb) {
-    
     AM::PacketID packet_id = AM::parse_network_packet(m_tcprecv_data, sizeb);
+    if(packet_id == AM::PacketID::NONE) {
+        return;
+    }
 
     switch(packet_id) {
         case AM::PacketID::CHAT_MESSAGE:
@@ -17,14 +19,75 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             m_msg_recv_callback(255, 255, 255, m_tcprecv_data);
             break;
 
+        case AM::PacketID::PLAYER_ID:
+            if(sizeb != sizeof(this->player_id)) {
+                fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
+                        "for PLAYER_ID\n", __func__, sizeb);
+                return;
+            }
+            memmove(&this->player_id, m_tcprecv_data, sizeof(this->player_id));
+            printf("PLAYER ID = %i\n", this->player_id);
 
-        // ...
+            // Now send the received player id via UDP
+            // so the server can save the endpoint.
+            AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_ID);
+            AM::packet_write_int(&this->packet, { this->player_id });
+            this->send_packet(AM::NetProto::UDP);
+            break;
+
+        case AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED:
+            printf("\033[32m + SUCCESFULLY CONNECTED TO THE SERVER +\033[0m\n");
+            break;
+
     }
-
 }
 
 
 void AM::Network::m_handle_udp_packet(size_t sizeb) {
+    AM::PacketID packet_id = AM::parse_network_packet(m_udprecv_data, sizeb);
+
+    switch(packet_id) {
+        case AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA:
+            if(sizeb != AM::PacketSize::PLAYER_MOVEMENT_AND_CAMERA) {
+                fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
+                        "for PLAYER_MOVEMENT_AND_CAMERA\n", __func__, sizeb);
+                return;
+            }
+            {
+                int player_id = -1;
+                memmove(&player_id, m_udprecv_data, sizeof(player_id));
+
+                N_Player player;
+                player.id = player_id;
+
+                // Copy the player data if it already exists.
+                const auto player_search = this->players.find(player_id);
+                if(player_search != this->players.end()) {
+                    player = player_search->second;
+                }
+
+                size_t offset = sizeof(player_id);
+                
+                memmove(&player.pos, m_udprecv_data+offset, sizeof(float)*3);
+                offset += sizeof(float)*3;
+
+                memmove(&player.cam_yaw, m_udprecv_data+offset, sizeof(float));
+                offset += sizeof(float);
+                
+                memmove(&player.cam_pitch, m_udprecv_data+offset, sizeof(float));
+                offset += sizeof(float);
+
+                memmove(&player.anim_id, m_udprecv_data+offset, sizeof(int));
+                //offset += sizeof(int);
+
+                // Insert player data if not in hashmap
+                // or replace existing one.
+                this->players[player_id] = player;
+            }
+            break;
+
+    }
+
 }
 
 
@@ -53,7 +116,7 @@ AM::Network::Network(asio::io_context& io_context, const NetConnectCFG& cfg)
 
         m_connected = true;
         m_do_read_tcp();
-        m_do_write_udp();
+        m_do_read_udp();
 
         // Start event handler.
         m_event_handler_th = std::thread([](asio::io_context& context){
@@ -75,98 +138,10 @@ void AM::Network::close(asio::io_context& io_context) {
 }
 
 
-bool AM::Network::m_write_packet_bytes(void* data, size_t data_sizeb) {
-    if((m_packet_size + data_sizeb) >= AM::MAX_PACKET_SIZE) {
-        m_packet_status = PacketStatus::NOT_PREPARED;
-        fprintf(stderr, "ERROR! \"%s\" @ %s: The packet is too large to write anymore info. "
-                "It has been marked as 'NOT_PREPARED'!\n", __FILE__, __func__);
-        return false;
-    }
-
-    memmove(m_packet_data + m_packet_size,
-            data,
-            data_sizeb);
-
-    m_packet_size += data_sizeb; 
-
-    return true;
-}
-   
-bool AM::Network::m_write_data_separator() {
-    if((m_packet_size + 1) >= AM::MAX_PACKET_SIZE) {
-        m_packet_status = PacketStatus::NOT_PREPARED;
-        fprintf(stderr, "ERROR! \"%s\" @ %s: The packet is too large to write anymore info. "
-                "It has been marked as 'NOT_PREPARED'!\n", __FILE__, __func__);
-        return false;
-    }
-
-    m_packet_data[m_packet_size++] = AM::PACKET_DATA_SEPARATOR;
-
-    return true;
-}
-
-
-void AM::Network::prepare_packet(AM::PacketID packet_id) {
-    memset(m_packet_data, 0, 
-            (m_packet_size < AM::MAX_PACKET_SIZE) ? m_packet_size : AM::MAX_PACKET_SIZE);
-    
-    m_packet_size = 0;
-    if(!m_write_packet_bytes((void*)&packet_id, sizeof(AM::PacketID))) {
-        return;
-    }
-
-    m_packet_status = PacketStatus::PREPARED;
-}
-
-
-void AM::Network::write_string(const std::string& str) {
-    if(m_packet_status == PacketStatus::NOT_PREPARED) { return; }
-    
-    for(size_t i = 0; i < str.size(); i++) {
-        if(i >= AM::MAX_PACKET_SIZE) {
-            fprintf(stderr, "ERROR! \"%s\" @ %s: Too much data for packet, Some of it is ignored.\n",
-                    __FILE__, __func__);
-            break;
-        }
-
-        m_packet_data[i+4] = str[i];
-        m_packet_size++;
-    }
-    m_packet_status = PacketStatus::WRITTEN;
-}
-
-
-void AM::Network::write_float(std::initializer_list<float> data) {
-    if(m_packet_status == PacketStatus::NOT_PREPARED) { return; }
-    for(auto it = data.begin(); it != data.end(); ++it) {
-        if(!m_write_packet_bytes((void*)it, sizeof(float))) {
-            return;
-        }
-    }
-    m_packet_status = PacketStatus::WRITTEN;
-}
-
-void AM::Network::write_int(std::initializer_list<int> data) {
-    if(m_packet_status == PacketStatus::NOT_PREPARED) { return; }
-    for(auto it = data.begin(); it != data.end(); ++it) {
-        if(!m_write_packet_bytes((void*)it, sizeof(float))) {
-            return;
-        }
-    }
-    m_packet_status = PacketStatus::WRITTEN;
-}
-
 void AM::Network::send_packet(AM::NetProto proto) {
-    if(m_packet_status <= PacketStatus::NOT_PREPARED) {
-        fprintf(stderr, "ERROR! \"%s\" @ %s: The packet is not been prepared.\n", __FILE__, __func__);
-        return;
-    }
-    if(m_packet_status <= PacketStatus::PREPARED) {
-        fprintf(stderr, "ERROR! \"%s\" @ %s: The packet doesnt contain any data.\n", __FILE__, __func__);
-        return;
-    }
 
-
+    // TODO: Check packet status before sending it.
+    
     if(proto == AM::NetProto::TCP) {
         m_tcp_data_ready_to_send = true;
         m_do_write_tcp();
@@ -176,8 +151,6 @@ void AM::Network::send_packet(AM::NetProto proto) {
         m_udp_data_ready_to_send = true;
         m_do_write_udp();
     }
-
-    m_packet_status = PacketStatus::NOT_PREPARED;
 }
 
 
@@ -195,13 +168,6 @@ void AM::Network::m_do_read_tcp() {
                 }
 
                 m_handle_tcp_packet(size);
-                /*
-                if(m_msg_recv_callback) {
-                    m_msg_recv_callback(255, 255, 255, m_tcprecv_data);
-                }
- 
-                printf("\033[33m (TCP) <-\033[0m \"%s\" (%li)\n", m_tcprecv_data, size);
-                */
                 m_do_read_tcp();
             });
 
@@ -215,7 +181,7 @@ void AM::Network::m_do_write_tcp() {
     m_tcp_data_ready_to_send = false;
 
     asio::async_write(m_tcp_socket, 
-            asio::buffer(m_packet_data, m_packet_size),
+            asio::buffer(this->packet.data, this->packet.size),
             [this](std::error_code ec, std::size_t /*size*/) {
                 if(ec) {
                     printf("[write_tcp](%i): %s\n", ec.value(), ec.message().c_str());
@@ -253,7 +219,7 @@ void AM::Network::m_do_write_udp() {
     m_udp_data_ready_to_send = false;
 
     m_udp_socket.async_send_to(
-            asio::buffer(m_packet_data, m_packet_size), m_udp_sender_endpoint,
+            asio::buffer(this->packet.data, this->packet.size), m_udp_sender_endpoint,
             [this](std::error_code ec, std::size_t) {
                 if(ec) {
                     printf("[write_udp](%i): %s\n", ec.value(), ec.message().c_str());

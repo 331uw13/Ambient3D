@@ -134,11 +134,11 @@ namespace AM {
 
                     // Specular.
                     float spec = pow(max(dot(view_dir, reflect(-light_dir, normal)), 0.0), material_shine);
-                    vec3 specular = spec * mix(vec3(1.0, 1.0, 1.0), light_color, 0.5);
+                    vec3 specular = spec * mix(vec3(1.0, 1.0, 1.0), light_color, 0.675);
                     specular *= material_shine;
 
                     // Attenuation.
-                    float L = 1.0;
+                    float L = 0.8;
                     float Q = 2.3;
                     float dist = distance(frag_pos, light_pos) / radius;
                     dist = pow(dist, cutoff);

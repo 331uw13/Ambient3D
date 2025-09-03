@@ -17,11 +17,11 @@ AM::Player::Player() {
     this->cam.projection = CAMERA_PERSPECTIVE;
     this->vel = Vector3(0.0f, 0.0f, 0.0f);
     this->pos = Vector3(0.0f, 10.0f, 1.0f);
-    this->speed = 50.0f;
+    this->speed = 40.0f;
     this->cam_sensetivity = 0.0028f;
     this->noclip = false;
     this->noclip_speed = 250.0f;
-    this->height = 3.5f;
+    this->height = 2.35f;
     this->gravity = 70.0f;
     this->on_ground = false;
     this->num_jumps_in_air = 2;
@@ -31,6 +31,20 @@ AM::Player::Player() {
 AM::Player::~Player() {
 }
  
+        
+void AM::Player::update_animation() {
+
+    // IDLE is default.
+    this->anim_id = AM::AnimID::IDLE;
+
+    if(this->is_moving) {
+        this->anim_id = AM::AnimID::WALKING;
+    }
+    if(this->is_running) {
+        this->anim_id = AM::AnimID::RUNNING;
+    }
+}
+
 
 void AM::Player::update_movement(State* st, bool handle_user_input) {
     const float dt = GetFrameTime();
@@ -40,7 +54,12 @@ void AM::Player::update_movement(State* st, bool handle_user_input) {
                 cos(this->cam_pitch) * cos(this->cam_yaw)
                 );
 
+    // TODO: Do not hardcode values.
+
     constexpr Vector3 UP = { 0.0f, 1.0f, 0.0f };
+
+    this->is_moving = false;
+    this->is_running = false;
 
     cam_dir = Vector3Normalize(cam_dir);
     Vector3 right = Vector3Normalize(Vector3CrossProduct(cam_dir, UP));
@@ -50,10 +69,11 @@ void AM::Player::update_movement(State* st, bool handle_user_input) {
 
     if(!this->noclip && IsKeyDown(KEY_LEFT_SHIFT)) {
         speed *= 3.0f;
+        this->is_running = true;
     }
     else
     if(this->noclip && IsKeyDown(KEY_LEFT_ALT)) {
-        speed *= 10.0;
+        speed *= 10.0; // Noclip speed multiplier.
     }
     
 
@@ -117,6 +137,13 @@ void AM::Player::update_movement(State* st, bool handle_user_input) {
 
     this->chunk_x = (int)floor(this->pos.x / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
     this->chunk_z = (int)floor(this->pos.z / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
+
+    if(!FloatEquals(this->pos.x, this->pos_prevframe.x)
+    || !FloatEquals(this->pos.y, this->pos_prevframe.y)
+    || !FloatEquals(this->pos.z, this->pos_prevframe.z)) {
+        this->is_moving = true;
+    }
+
 }
 
 void AM::Player::m_update_slide() {
@@ -154,6 +181,7 @@ void AM::Player::m_update_slide() {
     }
  
     AMutil::clamp<float>(m_slide_boost, 0.0f, 1000.0f);
+
 
     m_sliding = true;
 }

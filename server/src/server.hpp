@@ -5,18 +5,38 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
-
+#include <map>
 #include <asio.hpp>
 
 #include "networking_agreements.hpp"
 
-#include "tcp_session.hpp"
+//#include "tcp_session.hpp"
 #include "udp_handler.hpp"
+#include "player.hpp"
 
 
 using namespace asio::ip;
 
-typedef std::shared_ptr<AM::TCP_session> Client;
+// TODO: REMOVE THIS!!!!!!  (read below text)
+//typedef std::shared_ptr<AM::TCP_session> Client;
+
+
+// to be honest this could be structured ALOT better,
+// but just testing and it can be refactored later...
+
+// TCP_session   (each client)
+// PlayerData    (each client)
+//
+// We want to get players by their ID
+//
+// Could create Player class
+// which would hold the PlayerData and TCP_session.
+// They could be saved in std::map<player_id, std::shared_ptr<Player>>
+// 
+// get_tcp_session_by_id AND get_player_by_id
+// can be replaced with:
+// get_player_by_id
+// ^- which would return Player*
 
 
 namespace AM {
@@ -31,23 +51,40 @@ namespace AM {
             ~Server();
 
             void start(asio::io_context& io_context);
+            
+            std::mutex  players_mutex; // <- tcp_clients_mtx
+            std::map<int/*player_id*/, Player> players; // <- tcp_clients; 
 
-            std::mutex          tcp_clients_mtx;
-            std::vector<Client> tcp_clients; 
 
-            void remove_client(const Client& client);
-            void broadcast_tcp(const std::string& str);
+            void        remove_player     (int player_id);
+            AM::Player* get_player_by_id  (int player_id);
+
+            void broadcast_tcp_message(const std::string& str);
+
+
+
+            //Client      get_tcp_session_by_id(int player_id);
+            //PlayerData* get_player_by_id(int player_id);
+
+            std::atomic<bool> show_debug_info { false };
+
         private:
 
-            std::atomic<bool> m_threads_exit { false };
+            std::atomic<bool> m_keep_threads_alive { true };
+
+            //std::map<int/*player_id*/, PlayerData> m_player_data_map;
 
             void         m_userinput_handler_th__func();
             std::thread  m_userinput_handler_th;
+
+            void         m_update_loop_th__func();
+            std::thread  m_update_loop_th;
 
             // TCP is used for chat.
             tcp::acceptor m_tcp_acceptor;
             void          m_do_accept_TCP();
 
+            int           m_next_player_id { 1 };
 
             // UDP is used for gameplay packets.
             UDP_handler m_udp_handler;

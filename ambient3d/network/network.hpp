@@ -4,12 +4,14 @@
 #include <cstdint>
 #include <thread>
 #include <functional>
+#include <map>
 
 #include <deque>
 #include <asio.hpp>
 
-#include "networking_agreements.hpp"
-#include "packet_ids.hpp"
+#include "packet_writer.hpp"
+#include "network_player.hpp"
+
 #include "../gui/chatbox.hpp"
 
 
@@ -33,6 +35,8 @@ namespace AM {
         UDP
     };
 
+
+
     class Network {
 
         public:
@@ -40,20 +44,21 @@ namespace AM {
             Network(asio::io_context& io_context, const NetConnectCFG& cfg);
             ~Network() {}
 
+            // The packet can be written with functions from
+            // './shared/packet_writer.*'
+            // This is going to be saved here so it dont need to be
+            // always allocated again on the stack.
+            Packet packet;
+            
+            void   send_packet(AM::NetProto proto);
 
-            // The packet must be "prepared" before writing the packet data.
-            // after all data needed is written the packet can be sent.
-            void prepare_packet(AM::PacketID packet_id);
-            void write_string  (const std::string& str);
-            void write_float   (std::initializer_list<float> data);
-            void write_int     (std::initializer_list<int> data);
-            void send_packet   (AM::NetProto proto);
-
-            //void write_string(AM::NetProto proto, AM::PacketID packet_id, const std::string& message);
+            std::map<int/* player_id*/, N_Player> players;
 
             bool is_connected() { return m_connected; }
             void close(asio::io_context& io_context);
-            
+
+            int player_id;
+            //UUID uuid;
 
         private:
             bool m_connected { false };
@@ -63,22 +68,24 @@ namespace AM {
                     uint8_t, // Blue
                     const std::string&)> m_msg_recv_callback;
 
+            /*
             enum PacketStatus : int {
                 NOT_PREPARED = 0,
                 PREPARED,
                 WRITTEN
             };
+            */
 
-            PacketStatus            m_packet_status;
+            //PacketStatus            m_packet_status;
             
-            char    m_packet_data[AM::MAX_PACKET_SIZE];
-            size_t  m_packet_size;
+            //char    m_packet_data[AM::MAX_PACKET_SIZE];
+            //size_t  m_packet_size;
 
             bool m_udp_data_ready_to_send;
             bool m_tcp_data_ready_to_send;
 
-            bool m_write_packet_bytes(void* data, size_t data_sizeb);
-            bool m_write_data_separator();
+            //bool m_write_packet_bytes(void* data, size_t data_sizeb);
+            //bool m_write_data_separator();
    
 
             std::thread m_event_handler_th;

@@ -36,7 +36,7 @@ namespace AM {
 
             // These functions are implemented 
             // by the module which extends GuiModule.
-            virtual void module__key_input(int/* key*/){}
+            virtual void module__char_input(int/* key*/){}
             virtual void module__render(Font*) {}
 
             GuiModuleID get_id()             { return m_id; }

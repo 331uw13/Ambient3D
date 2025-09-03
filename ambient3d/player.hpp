@@ -5,6 +5,8 @@
 #include <rcamera.h>
 #include <cstdint>
 
+#include "anim_ids.hpp"
+
 namespace AM {
     class State;
     class Player {
@@ -31,10 +33,13 @@ namespace AM {
             int      chunk_z { 0 };
             int8_t   num_jumps_in_air { 0 };
             Vector3  terrain_normal { 0, 0, 0 };
-
+            bool     is_moving { false };
+            bool     is_running { false };
+            int      anim_id { 0 };
 
             void update_movement(State* st, bool handle_user_input = true);
             void update_camera();
+            void update_animation();
 
             void jump();
 
@@ -47,7 +52,10 @@ namespace AM {
             bool m_jumped { false };
             int  m_num_jumps_left { 0 };
             bool m_sliding { false };
-            
+
+            // Used for sliding.
+            // It is the Y axis velocity while in air
+            // and may be reset by 'm_update_slide'
             float m_Yvelocity_in_air { 0.0f };
     };
 };
