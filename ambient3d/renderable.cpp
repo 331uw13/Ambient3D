@@ -9,8 +9,7 @@
 
 void AM::Renderable::load(
         const char* path,
-        std::initializer_list<Shader> shaders,
-        RenderableLoadOpt load_options
+        std::initializer_list<Shader> shaders, int load_flags
 ){
     if(!FileExists(path)) {
         fprintf(stderr, "ERROR! %s: \"%s\" doesnt exist or no permission to read.\n",
@@ -32,8 +31,12 @@ void AM::Renderable::load(
         return;
     }
 
-    if(load_options == LF_ENABLE_MESH_TRANSFORMS) {
+    if((load_flags & RLF_MESH_TRANSFORMS)) {
         this->mesh_transforms = new Matrix[m_model.meshCount];
+    }
+
+    if((load_flags & RLF_ANIMATIONS)) {
+        this->anim.load(path);
     }
 
     m_mesh_attribs = new MeshAttrib[m_model.meshCount];
@@ -53,7 +56,6 @@ void AM::Renderable::load(
 
     // Name will be used for better error messages.
     m_name_from_path(path);
-
 
     //mesh_attribute(0, MeshAttrib{}); // Add default mesh attribute.
     this->transform = &m_model.transform;
@@ -133,7 +135,7 @@ void AM::Renderable::render() {
         DrawMesh(m_model.meshes[i], mat, 
                 (this->mesh_transforms == NULL) 
                 ? m_model.transform
-                : MatrixMultiply(this->mesh_transforms[i], m_model.transform) // TODO: This needs some kind of order option.
+                : MatrixMultiply(this->mesh_transforms[i], m_model.transform)
                 );
         
         if(mesh_attr.render_backface) {

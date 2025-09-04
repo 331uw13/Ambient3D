@@ -6,12 +6,14 @@
 #include <vector>
 #include <cstdint>
 
+#include "animation.hpp"
 
 namespace AM {
 
     struct MeshAttrib {
 
-        // TODO: Move 'mesh_index' here.
+        // TODO: Move mesh_index here. ?
+        // TODO: Move mesh shader here. ?
 
         // NOTE: This only works with shader programs
         //       which implement wind in their vertex shaders.
@@ -23,23 +25,27 @@ namespace AM {
    
     };
 
-    // Load options for Renderable.
-    enum RenderableLoadOpt {
-        LF_DEFAULT,
+    // Renderable Load Flags --------
 
-        // Enables ability to change individual mesh transform matrices
-        // through 'Renderable::mesh_transform' array.
-        LF_ENABLE_MESH_TRANSFORMS, 
+    // Enables ability to change individual mesh transform matrices
+    // through 'Renderable::mesh_transform' array.
+    static constexpr int RLF_MESH_TRANSFORMS = 1 << 0;
+    
+    // If this flag is used animations for model
+    // are loaded from the same file.
+    static constexpr int RLF_ANIMATIONS = 1 << 1;
+    
+    // ------------------------------
 
-    };
 
     static constexpr size_t RENDERABLE_MAX_NAME_SIZE = 24;
+
+
     class Renderable {
         public:
 
             void load(const char* path,
-                    std::initializer_list<Shader>  shaders,
-                    RenderableLoadOpt load_options = RenderableLoadOpt::LF_DEFAULT);
+                    std::initializer_list<Shader> shaders,  int load_flags = 0);
 
             // Guranteed to be NULL terminated.
             char name[RENDERABLE_MAX_NAME_SIZE];
@@ -54,6 +60,9 @@ namespace AM {
             // Size is number of meshes in model. 
             // Only available if ENABLE_MESH_TRANSFORMS is set used.
             Matrix* mesh_transforms { NULL };
+
+            AM::Animation  anim;
+            void           update_animation(float frame_time);
 
             uint32_t num_meshes()  { return (uint32_t)m_model.meshCount; }
             Model* get_model()     { return &m_model; }
