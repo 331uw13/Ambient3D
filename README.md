@@ -7,7 +7,7 @@
 
 
 ```
-The idea is to create easy to use cross-platform 3D game engine library
+The idea is to create easy to use cross-platform 3D game engine library.
 Optimized rendering and multiplayer support
 
 ... Work in progress
