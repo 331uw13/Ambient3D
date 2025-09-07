@@ -51,7 +51,7 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
             }
 
             printf("[CHAT(%li)]: %s\n", sizeb, m_data);
-            m_server->broadcast_tcp_message(m_data);
+            m_server->broadcast_msg(AM::PacketID::CHAT_MESSAGE, m_data);
             break;
 
         // ...

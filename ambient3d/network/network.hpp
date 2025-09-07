@@ -68,26 +68,10 @@ namespace AM {
                     uint8_t, // Blue
                     const std::string&)> m_msg_recv_callback;
 
-            /*
-            enum PacketStatus : int {
-                NOT_PREPARED = 0,
-                PREPARED,
-                WRITTEN
-            };
-            */
-
-            //PacketStatus            m_packet_status;
-            
-            //char    m_packet_data[AM::MAX_PACKET_SIZE];
-            //size_t  m_packet_size;
-
             bool m_udp_data_ready_to_send;
             bool m_tcp_data_ready_to_send;
 
-            //bool m_write_packet_bytes(void* data, size_t data_sizeb);
-            //bool m_write_data_separator();
-   
-
+           
             std::thread m_event_handler_th;
 
             asio::ip::tcp::socket m_tcp_socket;

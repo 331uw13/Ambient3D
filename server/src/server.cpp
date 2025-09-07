@@ -50,6 +50,10 @@ void AM::Server::remove_player(int player_id) {
     }
 
     this->players_mutex.unlock();
+
+    char msgbuf[512+1] = { 0 };
+    snprintf(msgbuf, 512, "Player %i left the server", player_id);
+    this->broadcast_msg(PacketID::SERVER_MESSAGE, msgbuf);
 }
 
 void AM::Server::m_do_accept_TCP() {
@@ -100,12 +104,12 @@ AM::Player* AM::Server::get_player_by_id(int player_id) {
 }
 
 
-void AM::Server::broadcast_tcp_message(const std::string& msg) {
+void AM::Server::broadcast_msg(AM::PacketID packet_id, const std::string& msg) {
     this->players_mutex.lock();
 
     for(auto it = this->players.begin(); it != this->players.end(); ++it) {
         Player* p = &it->second;
-        AM::packet_prepare(&p->tcp_session->packet, AM::PacketID::CHAT_MESSAGE);
+        AM::packet_prepare(&p->tcp_session->packet, packet_id);
         AM::packet_write_string(&p->tcp_session->packet, msg);
         p->tcp_session->send_packet();
     }

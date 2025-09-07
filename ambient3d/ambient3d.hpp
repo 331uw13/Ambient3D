@@ -1,7 +1,7 @@
 #ifndef AMBIENT3D_HPP
 #define AMBIENT3D_HPP
 
-#include <raylib.h>
+#include "raylib.h"
 #include <cstdint>
 #include <map>
 #include <array>

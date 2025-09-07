@@ -1,11 +1,12 @@
 #include <cstdio>
 
+
 #include "player.hpp"
 #include "chunk.hpp"
 #include "util.hpp"
 #include "ambient3d.hpp"
 
-#include <raymath.h>      
+#include "raymath.h"
 
 
 
@@ -21,7 +22,7 @@ AM::Player::Player() {
     this->cam_sensetivity = 0.0028f;
     this->noclip = false;
     this->noclip_speed = 250.0f;
-    this->height = 2.35f;
+    this->height = 1.85f;
     this->gravity = 70.0f;
     this->on_ground = false;
     this->num_jumps_in_air = 2;
@@ -138,9 +139,8 @@ void AM::Player::update_movement(State* st, bool handle_user_input) {
     this->chunk_x = (int)floor(this->pos.x / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
     this->chunk_z = (int)floor(this->pos.z / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
 
-    if(!FloatEquals(this->pos.x, this->pos_prevframe.x)
-    || !FloatEquals(this->pos.y, this->pos_prevframe.y)
-    || !FloatEquals(this->pos.z, this->pos_prevframe.z)) {
+    constexpr float MOVING_TRESHOLD = 0.3f;
+    if(Vector3Length(this->movement) > MOVING_TRESHOLD) {
         this->is_moving = true;
     }
 

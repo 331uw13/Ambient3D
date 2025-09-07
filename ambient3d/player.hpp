@@ -1,11 +1,13 @@
 #ifndef AMBIENT3D_PLAYER_HPP
 #define AMBIENT3D_PLAYER_HPP
 
-#include <raylib.h>
-#include <rcamera.h>
 #include <cstdint>
 
+#include "raylib.h"
+#include "rcamera.h"
+
 #include "anim_ids.hpp"
+
 
 namespace AM {
     class State;

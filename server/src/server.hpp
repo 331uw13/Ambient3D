@@ -59,8 +59,7 @@ namespace AM {
             void        remove_player     (int player_id);
             AM::Player* get_player_by_id  (int player_id);
 
-            void broadcast_tcp_message(const std::string& str);
-
+            void broadcast_msg(AM::PacketID packet_id, const std::string& str);
 
 
             //Client      get_tcp_session_by_id(int player_id);

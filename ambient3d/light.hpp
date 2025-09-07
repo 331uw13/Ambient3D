@@ -2,8 +2,9 @@
 #define AMBIENT3D_LIGHT_HPP
 
 #include <cstddef>
-#include <raylib.h>
-#include <raymath.h>
+
+#include "raylib.h"
+#include "raymath.h"
 
 
 namespace AM {

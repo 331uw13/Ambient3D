@@ -2,11 +2,13 @@
 #define AMBIENT3D_RENDERABLE_OBJECT_HPP
 
 
-#include <raylib.h>
 #include <vector>
 #include <cstdint>
 
+#include "raylib.h"
+
 #include "animation.hpp"
+
 
 namespace AM {
 
@@ -25,7 +27,7 @@ namespace AM {
    
     };
 
-    // Renderable Load Flags --------
+    // --- Renderable Load Flags --------
 
     // Enables ability to change individual mesh transform matrices
     // through 'Renderable::mesh_transform' array.
@@ -35,7 +37,7 @@ namespace AM {
     // are loaded from the same file.
     static constexpr int RLF_ANIMATIONS = 1 << 1;
     
-    // ------------------------------
+    // ----------------------------------
 
 
     static constexpr size_t RENDERABLE_MAX_NAME_SIZE = 24;

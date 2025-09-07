@@ -2,7 +2,7 @@
 #include "renderable.hpp"
 #include "ambient3d.hpp"
 
-#include <rlgl.h>
+#include "rlgl.h"
 
 #include "external/glad.h"
 

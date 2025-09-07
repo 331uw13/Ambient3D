@@ -3,9 +3,11 @@
 
 #include <initializer_list>
 #include <string>
-#include <raylib.h>
-#include <raymath.h>
 #include <cstdint>
+
+#include "raylib.h"
+#include "raymath.h"
+
 
 namespace AM {
     class State;

@@ -20,7 +20,8 @@ namespace AM {
     enum PacketID : int {
         NONE = 0,
 
-        CHAT_MESSAGE, // (tcp only)
+        CHAT_MESSAGE,    // (tcp only)
+        SERVER_MESSAGE,  // (tcp only)
 
         // Server will send player their id when they are connected (via TCP)
         // Then the client will reply with their ID via UDP protocol,

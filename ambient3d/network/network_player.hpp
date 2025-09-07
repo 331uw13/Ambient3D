@@ -20,11 +20,7 @@ namespace AM {
             float      cam_pitch { 0.0f };
             int        anim_id { 0 };
 
-            //------- Client side -------
             
-            float      anim_timer { 0.0f };
-            int        anim_frame { 0 };
-            int        prev_anim_id { 0 };
         private:
 
     };

@@ -1,7 +1,6 @@
 #ifndef AMBIENT3D_TERRAIN_HPP
 #define AMBIENT3D_TERRAIN_HPP
 
-#include <raylib.h>
 #include <vector>
 #include <cstdint>
 #include <mutex>
@@ -9,8 +8,11 @@
 #include <atomic>
 #include <map>
 
+#include "raylib.h"
+
 #include "chunk.hpp"
 #include "ivector.hpp"
+
 
 namespace AM {
 

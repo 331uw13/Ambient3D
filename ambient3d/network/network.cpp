@@ -19,6 +19,12 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             m_msg_recv_callback(255, 255, 255, m_tcprecv_data);
             break;
 
+        case AM::PacketID::SERVER_MESSAGE:
+            printf("[SERVER]: %s\n", m_tcprecv_data);
+            m_msg_recv_callback(255, 200, 50, m_tcprecv_data);
+            break;
+
+
         case AM::PacketID::PLAYER_ID:
             if(sizeb != sizeof(this->player_id)) {
                 fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
@@ -36,7 +42,7 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             break;
 
         case AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED:
-            printf("\033[32m + SUCCESFULLY CONNECTED TO THE SERVER +\033[0m\n");
+            m_msg_recv_callback(120, 255, 120, "Connected!");
             break;
 
     }
