@@ -6,7 +6,9 @@
 #include <mutex>
 #include <atomic>
 #include <map>
+#include <array>
 #include <asio.hpp>
+#include <nlohmann/json.hpp>
 
 #include "networking_agreements.hpp"
 
@@ -14,32 +16,17 @@
 #include "udp_handler.hpp"
 #include "player.hpp"
 
+#include "item_base.hpp"
 
+
+using json = nlohmann::json;
 using namespace asio::ip;
 
-// TODO: REMOVE THIS!!!!!!  (read below text)
-//typedef std::shared_ptr<AM::TCP_session> Client;
-
-
-// to be honest this could be structured ALOT better,
-// but just testing and it can be refactored later...
-
-// TCP_session   (each client)
-// PlayerData    (each client)
-//
-// We want to get players by their ID
-//
-// Could create Player class
-// which would hold the PlayerData and TCP_session.
-// They could be saved in std::map<player_id, std::shared_ptr<Player>>
-// 
-// get_tcp_session_by_id AND get_player_by_id
-// can be replaced with:
-// get_player_by_id
-// ^- which would return Player*
 
 
 namespace AM {
+
+    static constexpr int TICK_SPEED_MS = 40;
 
     class Server {
         public:
@@ -52,18 +39,21 @@ namespace AM {
 
             void start(asio::io_context& io_context);
             
-            std::mutex  players_mutex; // <- tcp_clients_mtx
-            std::map<int/*player_id*/, Player> players; // <- tcp_clients; 
-
+            std::mutex                          players_mutex;
+            std::map<int/*player_id*/, Player>  players;
+           
+            std::array<AM::ItemBase, AM::NUM_ITEMS> items;
+            std::vector<AM::ItemBase>               dropped_items;
+            std::mutex                              dropped_items_mutex;
 
             void        remove_player     (int player_id);
             AM::Player* get_player_by_id  (int player_id);
 
+            void spawn_item(AM::ItemID item_id, int count, const Vec3& pos);
             void broadcast_msg(AM::PacketID packet_id, const std::string& str);
 
-
-            //Client      get_tcp_session_by_id(int player_id);
-            //PlayerData* get_player_by_id(int player_id);
+            bool parse_item_list(const char* item_list_path);
+            void load_item(const char* entry_name, AM::ItemID item_id);
 
             std::atomic<bool> show_debug_info { false };
 
@@ -71,7 +61,10 @@ namespace AM {
 
             std::atomic<bool> m_keep_threads_alive { true };
 
-            //std::map<int/*player_id*/, PlayerData> m_player_data_map;
+            void         m_update_players();
+            void         m_update_items();
+
+            json         m_item_list;
 
             void         m_userinput_handler_th__func();
             std::thread  m_userinput_handler_th;

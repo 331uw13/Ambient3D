@@ -8,11 +8,14 @@
 
 #include <deque>
 #include <asio.hpp>
+#include <nlohmann/json.hpp>
 
 #include "packet_writer.hpp"
 #include "network_player.hpp"
 
 #include "../gui/chatbox.hpp"
+
+using json = nlohmann::json;
 
 
 namespace AM {
@@ -62,6 +65,8 @@ namespace AM {
 
         private:
             bool m_connected { false };
+            bool m_has_item_list { false };
+
             std::function<void(
                     uint8_t, // Red
                     uint8_t, // Green
@@ -71,6 +76,7 @@ namespace AM {
             bool m_udp_data_ready_to_send;
             bool m_tcp_data_ready_to_send;
 
+            json m_item_list;
            
             std::thread m_event_handler_th;
 

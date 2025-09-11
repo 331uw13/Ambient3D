@@ -24,6 +24,10 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             m_msg_recv_callback(255, 200, 50, m_tcprecv_data);
             break;
 
+        case AM::PacketID::SAVE_ITEM_LIST:
+            m_item_list = json::parse(m_tcprecv_data);
+            m_has_item_list = true;
+            break;
 
         case AM::PacketID::PLAYER_ID:
             if(sizeb != sizeof(this->player_id)) {
@@ -53,6 +57,16 @@ void AM::Network::m_handle_udp_packet(size_t sizeb) {
     AM::PacketID packet_id = AM::parse_network_packet(m_udprecv_data, sizeb);
 
     switch(packet_id) {
+
+        case AM::PacketID::ITEM_UPDATE:
+            {
+                for(size_t i = 0; i < sizeb; i++) {
+                    printf("%x, ", m_udprecv_data[i]);
+                }
+                printf("\n");
+            }
+            break;
+
         case AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA:
             if(sizeb != AM::PacketSize::PLAYER_MOVEMENT_AND_CAMERA) {
                 fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
