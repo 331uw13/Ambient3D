@@ -32,22 +32,52 @@ namespace AM {
         // this packet via TCP
         PLAYER_ID_HAS_BEEN_SAVED,
 
+        // Server is going to send full list of items to client when they connect.
+        // The client should save the list for future use.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  JSON data        (char array)
+        //
+        // NOTES:
+        // This packet can be re-send if server decides to modify values.
+        SAVE_ITEM_LIST, // (tcp only)
 
         // This packet contains the player's requested position in the world.
         // It also has camera pitch, yaw and animation information.
-        // NOTE: The client side position is always a "request" to the server
-        // - Format:
+        // The client side position is always a "request" to the server.
+        //
         // Byte offset  |  Value name
+        // ---------------------------------
         // 0            :  Packet ID        (int)
         // 4            :  Player ID        (int)
-        // 8            :  Player X         (float)
-        // 12           :  Player Y         (float)
-        // 16           :  Player Z         (float)
+        // 8            :  Player pos X     (float)
+        // 12           :  Player pos Y     (float)
+        // 16           :  Player pos Z     (float)
         // 20           :  Camera Yaw       (float)
         // 24           :  Camera Pitch     (float)
         // 28           :  Animation ID     (int)
         PLAYER_MOVEMENT_AND_CAMERA, // (udp only)
 
+        // Server will send item update packets to let nearby 
+        // clients know where the items are.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Item ID          (int)
+        // 8            :  Item pos X       (float)
+        // 12           :  Item pos Y       (float)
+        // 16           :  Item pos Z       (float)
+        // 20           :  Item entry name  (char array)
+        //
+        // NOTES:
+        // The packet may contain multiple items.
+        // To separate items 'AM::PACKET_DATA_SEPARATOR' 
+        // is used after (byte offset 20 + item entry name size)
+        // AM::PACKET_DATA_SEPARATOR is defined in "networking_agreement.hpp"
+        ITEM_UPDATE, // (udp only)
        
     };
 
