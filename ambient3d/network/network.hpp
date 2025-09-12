@@ -8,14 +8,12 @@
 
 #include <deque>
 #include <asio.hpp>
-#include <nlohmann/json.hpp>
 
 #include "packet_writer.hpp"
 #include "network_player.hpp"
+#include "../item_manager.hpp"
 
 #include "../gui/chatbox.hpp"
-
-using json = nlohmann::json;
 
 
 namespace AM {
@@ -47,6 +45,10 @@ namespace AM {
             Network(asio::io_context& io_context, const NetConnectCFG& cfg);
             ~Network() {}
 
+            void assign_item_manager(AM::ItemManager* item_manager) {
+                m_engine_item_manager = item_manager;
+            }
+
             // The packet can be written with functions from
             // './shared/packet_writer.*'
             // This is going to be saved here so it dont need to be
@@ -55,7 +57,7 @@ namespace AM {
             
             void   send_packet(AM::NetProto proto);
 
-            std::map<int/* player_id*/, N_Player> players;
+            std::map<int/* player_id*/, N_Player>  players;
 
             bool is_connected() { return m_connected; }
             void close(asio::io_context& io_context);
@@ -65,7 +67,6 @@ namespace AM {
 
         private:
             bool m_connected { false };
-            bool m_has_item_list { false };
 
             std::function<void(
                     uint8_t, // Red
@@ -73,10 +74,10 @@ namespace AM {
                     uint8_t, // Blue
                     const std::string&)> m_msg_recv_callback;
 
+            ItemManager* m_engine_item_manager;
+
             bool m_udp_data_ready_to_send;
             bool m_tcp_data_ready_to_send;
-
-            json m_item_list;
            
             std::thread m_event_handler_th;
 

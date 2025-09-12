@@ -22,7 +22,6 @@
 
 namespace AM {
 
-    static constexpr size_t ITEM_MAX_MODELPATH_SIZE = 63;
     static constexpr size_t ITEM_MAX_DISPLAYNAME_SIZE = 15;
     static constexpr size_t ITEM_MAX_DESC_SIZE = 47;
     static constexpr size_t ITEM_MAX_ENTRY_NAME_SIZE = 31;
@@ -43,11 +42,11 @@ namespace AM {
 
     class ItemBase {
         public:
-            char      model_path    [ITEM_MAX_MODELPATH_SIZE+1] { 0 };
-            char      display_name  [ITEM_MAX_DISPLAYNAME_SIZE+1] { 0 };
+            //char      display_name  [ITEM_MAX_DISPLAYNAME_SIZE+1] { 0 };
+            //char      desc          [ITEM_MAX_DESC_SIZE+1] { 0 };
             char      entry_name    [ITEM_MAX_ENTRY_NAME_SIZE+1] { 0 };
-            char      desc          [ITEM_MAX_DESC_SIZE+1] { 0 };
             uint8_t   max_stack;
+            int       uuid;
 
             float pos_x;
             float pos_y;

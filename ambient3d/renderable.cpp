@@ -19,11 +19,13 @@ void AM::Renderable::load(
 
     m_model = LoadModel(path);
 
+    /*
     if(!IsModelValid(m_model)) {
         fprintf(stderr, "ERROR! %s: Failed to load \"%s\"\n",
                 __func__, path);
         return;
     }
+    */
 
     if(m_model.meshCount <= 0) {
         fprintf(stderr, "ERROR! %s: (%s) Model doesnt have any meshes.\n",

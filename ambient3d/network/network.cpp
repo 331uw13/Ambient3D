@@ -25,8 +25,7 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             break;
 
         case AM::PacketID::SAVE_ITEM_LIST:
-            m_item_list = json::parse(m_tcprecv_data);
-            m_has_item_list = true;
+            m_engine_item_manager->assign_item_list(json::parse(m_tcprecv_data));
             break;
 
         case AM::PacketID::PLAYER_ID:
@@ -59,11 +58,52 @@ void AM::Network::m_handle_udp_packet(size_t sizeb) {
     switch(packet_id) {
 
         case AM::PacketID::ITEM_UPDATE:
+            if(sizeb < (sizeof(int)*2 + sizeof(float)*3)) {
+                fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
+                        "for ITEM_UPDATE\n", __func__, sizeb);
+                return;
+            }
             {
-                for(size_t i = 0; i < sizeb; i++) {
-                    printf("%x, ", m_udprecv_data[i]);
+                static AM::ItemBase item;
+
+                size_t byte_offset = 0;
+                while(byte_offset < sizeb) {
+
+                    memmove(&item.uuid, &m_udprecv_data[byte_offset], sizeof(int));
+                    byte_offset += sizeof(int);
+                    
+                    memmove(&item.id, &m_udprecv_data[byte_offset], sizeof(int));
+                    byte_offset += sizeof(int);
+                    
+                    memmove(&item.pos_x, &m_udprecv_data[byte_offset], sizeof(float)*3);
+                    byte_offset += sizeof(float)*3;
+
+                    // Read item entry_name
+                    memset(item.entry_name, 0, AM::ITEM_MAX_ENTRY_NAME_SIZE);
+                    size_t ename_idx = 0;
+                    while(true) {
+                        char c = m_udprecv_data[byte_offset];
+                        if(c == AM::PACKET_DATA_SEPARATOR) {
+                            byte_offset++; // Increment byte_offset here too 
+                                           // or else next item will have
+                                           // the separator byte in the name
+                            break;
+                        }
+
+                        item.entry_name[ename_idx] = c;
+
+                        if(ename_idx++ >= AM::ITEM_MAX_ENTRY_NAME_SIZE) {
+                            fprintf(stderr, "ERROR! %s: Unexpectedly long entry name (%s)\n",
+                                    __func__, item.entry_name);
+                            return;
+                        }
+                        if(byte_offset++ >= sizeb) {
+                            break;
+                        }
+                    }
+
+                    m_engine_item_manager->add_itembase(item);
                 }
-                printf("\n");
             }
             break;
 

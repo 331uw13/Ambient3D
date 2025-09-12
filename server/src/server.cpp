@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <iostream>
 #include <chrono>
+#include <ctime>
+#include <cstdlib>
 
 #include <fstream>
 #include <iostream>
@@ -20,6 +22,9 @@ void AM::Server::start(asio::io_context& io_context) {
 
     m_udp_handler.start(this);
     m_do_accept_TCP();
+
+    // Set random seed to current time.
+    std::srand(std::time({}));
 
     // Start the event handler.
     std::thread event_handler([](asio::io_context& context) {
@@ -185,19 +190,21 @@ void AM::Server::m_update_items() {
         for(size_t i = 0; i < this->dropped_items.size(); i++) {
             AM::ItemBase* item = &this->dropped_items[i];
 
-            AM::packet_write_int(&m_udp_handler.packet, { item->id });
-            AM::packet_write_float(&m_udp_handler.packet, {
-                    item->pos_x, item->pos_y, item->pos_z
+            AM::packet_write_int(&m_udp_handler.packet, {
+                    item->uuid,
+                    item->id
             });
-
-            AM::packet_write_string(&m_udp_handler.packet, item->model_path);
+            AM::packet_write_float(&m_udp_handler.packet, {
+                    item->pos_x,
+                    item->pos_y,
+                    item->pos_z
+            });
+            AM::packet_write_string(&m_udp_handler.packet, item->entry_name);
             AM::packet_write_separator(&m_udp_handler.packet);
         }
 
         m_udp_handler.send_packet(player->id);
-
     }
-    
 
     this->dropped_items_mutex.unlock();
 }
@@ -294,7 +301,7 @@ void AM::Server::load_item(const char* entry_name, AM::ItemID item_id) {
     item.pos_z = 0;
     item.lifetime_ticks = 0;
     item.id = item_id;
-    std::string model_path = m_item_list[entry_name]["model_path"].template get<std::string>();
+    item.uuid = 0;
     std::string display_name = m_item_list[entry_name]["display_name"].template get<std::string>();
     std::string description = m_item_list[entry_name]["description"].template get<std::string>();
 
@@ -306,26 +313,10 @@ void AM::Server::load_item(const char* entry_name, AM::ItemID item_id) {
                 __func__, entry_name);
         return;
     }
-    if(model_path.size() >= AM::ITEM_MAX_MODELPATH_SIZE) {
-        fprintf(stderr, "ERROR! %s: model_path (%s) is too long for %s.\n",
-                __func__, model_path.c_str(), entry_name);
-        return;
-    }
-    if(display_name.size() >= AM::ITEM_MAX_DISPLAYNAME_SIZE) {
-        fprintf(stderr, "ERROR! %s: display_name (%s) is too long for %s.\n",
-                __func__, display_name.c_str(), entry_name);
-        return;
-    }
-    if(description.size() >= AM::ITEM_MAX_DESC_SIZE) {
-        fprintf(stderr, "ERROR! %s: description (%s) is too long for %s.\n",
-                __func__, description.c_str(), entry_name);
-        return;
-    }
 
     memmove(item.entry_name,    entry_name,       entry_name_size);
-    memmove(item.model_path,    &model_path[0],   model_path.size());
-    memmove(item.display_name,  &display_name[0], display_name.size());
-    memmove(item.desc,          &description[0],  description.size());
+    //memmove(item.display_name,  &display_name[0], display_name.size());
+    //memmove(item.desc,          &description[0],  description.size());
     
     const std::string category = m_item_list[entry_name]["category"].template get<std::string>();
 
@@ -372,7 +363,6 @@ void AM::Server::load_item(const char* entry_name, AM::ItemID item_id) {
         return;
     }
 
-
     this->items[item_id] = item;
 }
 
@@ -392,9 +382,15 @@ void AM::Server::spawn_item(AM::ItemID item_id, int count, const Vec3& pos) {
     item.pos_y = pos.y;
     item.pos_z = pos.z;
     item.lifetime_ticks = 0;
+    item.uuid = std::rand();
 
-    printf("%s -> \"%s\" at %0.1f, %0.1f, %0.1f\n", __func__, item.display_name,
-            pos.x, pos.y, pos.z);
+    printf("%s -> \"%s\" XYZ = (%0.1f, %0.1f, %0.1f) UUID = %i\n", 
+            __func__, 
+            item.entry_name,
+            pos.x,
+            pos.y,
+            pos.z,
+            item.uuid);
     
     this->dropped_items_mutex.unlock();
 }

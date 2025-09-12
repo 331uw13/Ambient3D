@@ -64,6 +64,8 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
 
     SetTraceLogLevel(LOG_NONE);
 
+    m_item_manager.set_item_shader(this->shaders[AM::ShaderIDX::DEFAULT]);
+
     // Create rendering targets.
     // TODO: Move to separate function.-
 
@@ -124,8 +126,8 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
         { chatbox->push_message(r, g, b, str); };
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
-
-
+    this->net->assign_item_manager(&m_item_manager);
+    
 }
 
 AM::State::~State() {
@@ -135,7 +137,7 @@ AM::State::~State() {
     }
 
     m_lights_ubo.free();
-
+    m_item_manager.free_everything();
 
     SetTraceLogLevel(LOG_NONE);
     // Unload render targets.
@@ -333,6 +335,7 @@ void AM::State::m_fixed_tick_internal() {
     if(m_fixed_tick_timer > m_fixed_tick_speed) {
         m_fixed_tick_timer = 0;
 
+        m_item_manager.update();
 
         AM::packet_prepare(&this->net->packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
         AM::packet_write_int(&this->net->packet, { this->net->player_id });

@@ -18,7 +18,6 @@
 #include "network/network.hpp"
 
 
-
 namespace AM {
 
     static constexpr int NUM_BLOOM_SAMPLES = 16;
@@ -135,6 +134,7 @@ namespace AM {
             std::array<RenderTexture2D, NUM_BLOOM_SAMPLES>
                 m_bloom_samples;
 
+            ItemManager                      m_item_manager;
 
             bool                             m_fixed_tick_callback_set  { false };
             float                            m_fixed_tick_timer         { 0.0f };

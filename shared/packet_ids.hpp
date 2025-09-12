@@ -40,8 +40,6 @@ namespace AM {
         // 0            :  Packet ID        (int)
         // 4            :  JSON data        (char array)
         //
-        // NOTES:
-        // This packet can be re-send if server decides to modify values.
         SAVE_ITEM_LIST, // (tcp only)
 
         // This packet contains the player's requested position in the world.
@@ -66,11 +64,12 @@ namespace AM {
         // Byte offset  |  Value name
         // ---------------------------------
         // 0            :  Packet ID        (int)
-        // 4            :  Item ID          (int)
-        // 8            :  Item pos X       (float)
-        // 12           :  Item pos Y       (float)
-        // 16           :  Item pos Z       (float)
-        // 20           :  Item entry name  (char array)
+        // 4            :  Item UUID        (int)
+        // 8            :  Item ID          (int)
+        // 12           :  Item pos X       (float)
+        // 16           :  Item pos Y       (float)
+        // 20           :  Item pos Z       (float)
+        // 24           :  Item entry name  (char array)
         //
         // NOTES:
         // The packet may contain multiple items.
