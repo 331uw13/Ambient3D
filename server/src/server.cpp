@@ -293,7 +293,10 @@ void AM::Server::load_item(const char* entry_name, AM::ItemID item_id) {
         << "(\""
         << entry_name
         << "\") -> " << m_item_list[entry_name].dump(4) << std::endl;
+    
+    this->items[item_id].load_info(m_item_list, item_id, entry_name);
 
+    /*
     AM::ItemBase item;
     item.max_stack = 1;
     item.pos_x = 0;
@@ -362,8 +365,8 @@ void AM::Server::load_item(const char* entry_name, AM::ItemID item_id) {
                 __func__, entry_name);
         return;
     }
+    */
 
-    this->items[item_id] = item;
 }
 
 

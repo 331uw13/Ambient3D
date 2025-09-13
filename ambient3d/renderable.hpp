@@ -72,7 +72,8 @@ namespace AM {
 
             MeshAttrib* m_mesh_attribs;
             //std::vector<MeshAttrib> m_mesh_attribs;
-            bool m_loaded;
+            bool m_loaded { false };
+
             Model m_model;
 
             void m_name_from_path(const char* path);

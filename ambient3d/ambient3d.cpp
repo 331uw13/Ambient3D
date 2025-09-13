@@ -64,7 +64,6 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
 
     SetTraceLogLevel(LOG_NONE);
 
-    m_item_manager.set_item_shader(this->shaders[AM::ShaderIDX::DEFAULT]);
 
     // Create rendering targets.
     // TODO: Move to separate function.-
@@ -126,7 +125,6 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
         { chatbox->push_message(r, g, b, str); };
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
-    this->net->assign_item_manager(&m_item_manager);
     
 }
 
@@ -137,7 +135,6 @@ AM::State::~State() {
     }
 
     m_lights_ubo.free();
-    m_item_manager.free_everything();
 
     SetTraceLogLevel(LOG_NONE);
     // Unload render targets.
@@ -305,6 +302,9 @@ void AM::State::draw_info() {
 
 }
 
+
+void AM::State::m_render_dropped_items() {
+}
         
 void AM::State::frame_begin() {
     BeginTextureMode(m_render_targets[RenderTargetIDX::RESULT]);
@@ -313,7 +313,8 @@ void AM::State::frame_begin() {
 
     m_fixed_tick_internal();
     m_update_gui_module_inputs();
-
+    
+    m_render_dropped_items();
 
     // TODO: Move these.
     //       User may need better control.
@@ -335,7 +336,9 @@ void AM::State::m_fixed_tick_internal() {
     if(m_fixed_tick_timer > m_fixed_tick_speed) {
         m_fixed_tick_timer = 0;
 
-        m_item_manager.update();
+        // Update all items the server has sent.
+        m_item_manager.update_queue();
+        m_item_manager.update_lifetimes();
 
         AM::packet_prepare(&this->net->packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
         AM::packet_write_int(&this->net->packet, { this->net->player_id });

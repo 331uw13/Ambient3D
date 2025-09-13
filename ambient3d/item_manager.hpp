@@ -4,13 +4,13 @@
 
 // Item manager handles loading and unloading received items.
 // Their 3D models, inventory textures and item type specific information.
-//
-// Item may be unloaded from memory if its very far away
-// or its not been seen in a while
+
 
 #include <map>
 #include <array>
 #include <nlohmann/json.hpp>
+#include <deque>
+#include <mutex>
 
 #include "raylib.h"
 #include "item.hpp"
@@ -23,25 +23,17 @@ namespace AM {
     class ItemManager {
         public:
 
-            void update();
-            void add_itembase(const ItemBase& itembase);
-            void free_everything();
+            void update_lifetimes();
+            void update_queue();
+            void add_itembase_to_queue(const AM::ItemBase& itembase);
 
-            void assign_item_list(const json& item_list) { m_item_list = item_list; }
-            void set_item_shader(const Shader& shader) { m_item_shader = shader; }
+
 
         private:
 
-            // TODO: 
-            // store item renderables in array.
-            // unload and load them when needed
-            // then items should have pointers to this array.
-            std::array<>
+            std::mutex             m_items_queue_mutex;
+            std::deque<AM::Item>   m_items_queue;
 
-            Shader m_item_shader;
-            json m_item_list;
-
-            std::map<int/* item uuid*/, Item> m_item_map;
 
     };
 

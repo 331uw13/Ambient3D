@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cstdint>
+#include <nlohmann/json.hpp>
 
 #include "items/weapon.hpp"
 #include "items/tool.hpp"
@@ -20,11 +21,14 @@
    And clients have more control over memory usage.
 */
 
+using json = nlohmann::json;
+
 namespace AM {
 
+    static constexpr size_t ITEM_MAX_ENTRYNAME_SIZE = 31;
     static constexpr size_t ITEM_MAX_DISPLAYNAME_SIZE = 15;
     static constexpr size_t ITEM_MAX_DESC_SIZE = 47;
-    static constexpr size_t ITEM_MAX_ENTRY_NAME_SIZE = 31;
+    static constexpr size_t ITEM_MAX_MODELPATH_SIZE = 47;
 
     enum ItemID : int {
         APPLE=0,
@@ -42,9 +46,12 @@ namespace AM {
 
     class ItemBase {
         public:
-            //char      display_name  [ITEM_MAX_DISPLAYNAME_SIZE+1] { 0 };
-            //char      desc          [ITEM_MAX_DESC_SIZE+1] { 0 };
-            char      entry_name    [ITEM_MAX_ENTRY_NAME_SIZE+1] { 0 };
+            void load_info(const json& item_list, AM::ItemID item_id, const char* entry_name);
+
+            char      entry_name    [ITEM_MAX_ENTRYNAME_SIZE+1] { 0 };
+            char      display_name  [ITEM_MAX_DISPLAYNAME_SIZE+1] { 0 };
+            char      description   [ITEM_MAX_DESC_SIZE+1] { 0 };
+            char      model_path    [ITEM_MAX_MODELPATH_SIZE+1] { 0 };
             uint8_t   max_stack;
             int       uuid;
 

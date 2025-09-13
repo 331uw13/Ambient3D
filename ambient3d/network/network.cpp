@@ -25,7 +25,8 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             break;
 
         case AM::PacketID::SAVE_ITEM_LIST:
-            m_engine_item_manager->assign_item_list(json::parse(m_tcprecv_data));
+            //m_engine_item_manager->assign_item_list(json::parse(m_tcprecv_data));
+            printf("[NETWORK]: Got item list from server.\n");
             break;
 
         case AM::PacketID::PLAYER_ID:
@@ -35,7 +36,6 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
                 return;
             }
             memmove(&this->player_id, m_tcprecv_data, sizeof(this->player_id));
-            printf("PLAYER ID = %i\n", this->player_id);
 
             // Now send the received player id via UDP
             // so the server can save the endpoint.
@@ -64,37 +64,37 @@ void AM::Network::m_handle_udp_packet(size_t sizeb) {
                 return;
             }
             {
-                static AM::ItemBase item;
+                static AM::ItemBase itembase;
 
                 size_t byte_offset = 0;
                 while(byte_offset < sizeb) {
 
-                    memmove(&item.uuid, &m_udprecv_data[byte_offset], sizeof(int));
+                    memmove(&itembase.uuid, &m_udprecv_data[byte_offset], sizeof(int));
                     byte_offset += sizeof(int);
                     
-                    memmove(&item.id, &m_udprecv_data[byte_offset], sizeof(int));
+                    memmove(&itembase.id, &m_udprecv_data[byte_offset], sizeof(int));
                     byte_offset += sizeof(int);
                     
-                    memmove(&item.pos_x, &m_udprecv_data[byte_offset], sizeof(float)*3);
+                    memmove(&itembase.pos_x, &m_udprecv_data[byte_offset], sizeof(float)*3);
                     byte_offset += sizeof(float)*3;
 
                     // Read item entry_name
-                    memset(item.entry_name, 0, AM::ITEM_MAX_ENTRY_NAME_SIZE);
+                    memset(itembase.entry_name, 0, AM::ITEM_MAX_ENTRYNAME_SIZE);
                     size_t ename_idx = 0;
                     while(true) {
-                        char c = m_udprecv_data[byte_offset];
-                        if(c == AM::PACKET_DATA_SEPARATOR) {
+                        char byte = m_udprecv_data[byte_offset];
+                        if(byte == AM::PACKET_DATA_SEPARATOR) {
                             byte_offset++; // Increment byte_offset here too 
                                            // or else next item will have
                                            // the separator byte in the name
                             break;
                         }
 
-                        item.entry_name[ename_idx] = c;
+                        itembase.entry_name[ename_idx] = byte;
 
-                        if(ename_idx++ >= AM::ITEM_MAX_ENTRY_NAME_SIZE) {
+                        if(ename_idx++ >= AM::ITEM_MAX_ENTRYNAME_SIZE) {
                             fprintf(stderr, "ERROR! %s: Unexpectedly long entry name (%s)\n",
-                                    __func__, item.entry_name);
+                                    __func__, itembase.entry_name);
                             return;
                         }
                         if(byte_offset++ >= sizeb) {
@@ -102,7 +102,8 @@ void AM::Network::m_handle_udp_packet(size_t sizeb) {
                         }
                     }
 
-                    m_engine_item_manager->add_itembase(item);
+                    // Add the item to queue to be loaded or only updated.
+                    m_engine_item_manager->add_itembase_to_queue(itembase);
                 }
             }
             break;

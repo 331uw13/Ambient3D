@@ -135,6 +135,7 @@ namespace AM {
                 m_bloom_samples;
 
             ItemManager                      m_item_manager;
+            void                             m_render_dropped_items();
 
             bool                             m_fixed_tick_callback_set  { false };
             float                            m_fixed_tick_timer         { 0.0f };

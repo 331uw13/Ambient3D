@@ -16,6 +16,7 @@
 #include "../gui/chatbox.hpp"
 
 
+
 namespace AM {
 
     struct NetConnectCFG {

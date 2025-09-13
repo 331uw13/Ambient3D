@@ -7,6 +7,7 @@ namespace AM {
 
     struct FoodStruct {
         int eat_benefit;
+        float eat_duration;
     };
 
 };

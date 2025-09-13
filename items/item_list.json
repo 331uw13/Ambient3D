@@ -6,7 +6,8 @@
         "description": "Healthy food.",
         "model_path": "items/models/apple.glb",
         "max_stack": 32,
-        "eat_benefit": 15
+        "eat_benefit": 15,
+        "eat_duration": 3.0
     },
 
     "assault_rifle_A": {

@@ -12,7 +12,7 @@ namespace AM {
     class Item : public AM::ItemBase {
         public:
 
-            Renderable renderable;
+            Renderable* renderable { NULL };
             Texture inv_texture; // Inventory texture.  TODO: Create tool for this
 
             float inactive_time;

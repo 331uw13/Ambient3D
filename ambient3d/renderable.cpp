@@ -139,7 +139,7 @@ void AM::Renderable::render() {
                 ? m_model.transform
                 : MatrixMultiply(this->mesh_transforms[i], m_model.transform)
                 );
-        
+    
         if(mesh_attr.render_backface) {
             rlEnableBackfaceCulling();
         }
