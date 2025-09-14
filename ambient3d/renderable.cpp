@@ -7,30 +7,28 @@
 #include "external/glad.h"
 
 
-void AM::Renderable::load(
+bool AM::Renderable::load(
         const char* path,
         std::initializer_list<Shader> shaders, int load_flags
 ){
     if(!FileExists(path)) {
         fprintf(stderr, "ERROR! %s: \"%s\" doesnt exist or no permission to read.\n",
                 __func__, path);
-        return;
+        return false;
     }
 
     m_model = LoadModel(path);
 
-    /*
     if(!IsModelValid(m_model)) {
         fprintf(stderr, "ERROR! %s: Failed to load \"%s\"\n",
                 __func__, path);
-        return;
+        return false;
     }
-    */
 
     if(m_model.meshCount <= 0) {
         fprintf(stderr, "ERROR! %s: (%s) Model doesnt have any meshes.\n",
                 __func__, path);
-        return;
+        return false;
     }
 
     if((load_flags & RLF_MESH_TRANSFORMS)) {
@@ -62,6 +60,7 @@ void AM::Renderable::load(
     //mesh_attribute(0, MeshAttrib{}); // Add default mesh attribute.
     this->transform = &m_model.transform;
     m_loaded = true;
+    return true;
 }
 
 void AM::Renderable::m_name_from_path(const char* path) {
@@ -139,6 +138,8 @@ void AM::Renderable::render() {
                 ? m_model.transform
                 : MatrixMultiply(this->mesh_transforms[i], m_model.transform)
                 );
+        
+        AM::set_uniform_float(mat.shader.id, "u_material_shine", 1.0);
     
         if(mesh_attr.render_backface) {
             rlEnableBackfaceCulling();

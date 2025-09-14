@@ -11,6 +11,15 @@
 #include "server.hpp"
 
 
+AM::Server::Server(asio::io_context& context, const AM::ServerCFG& cfg) :
+    m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), cfg.tcp_port)),
+    m_udp_handler(context, cfg.udp_port)
+{
+    m_config = cfg;
+    if(m_parse_item_list(cfg.item_list_path)) {
+        this->start(context);
+    }
+}
         
 AM::Server::~Server() {
 
@@ -31,7 +40,6 @@ void AM::Server::start(asio::io_context& io_context) {
         context.run();
     }, std::ref(io_context));
 
-
     // Start user input handler.
     m_userinput_handler_th = 
         std::thread(&AM::Server::m_userinput_handler_th__func, this);
@@ -41,8 +49,8 @@ void AM::Server::start(asio::io_context& io_context) {
         std::thread(&AM::Server::m_update_loop_th__func, this);
 
     // Spawn items for testing
-    this->spawn_item(AM::ItemID::M4A16, 1, Vec3{ 3, 5, -2 });
-    this->spawn_item(AM::ItemID::HEAVY_AXE, 1, Vec3{ 6, 5, -2 });
+    this->spawn_item(AM::ItemID::M4A16, 1, Vec3{ 3, 3, 16 });
+    this->spawn_item(AM::ItemID::HEAVY_AXE, 1, Vec3{ 6, 3, -40 });
 
     // Input handler may tell to shutdown.
     m_userinput_handler_th.join();
@@ -186,9 +194,16 @@ void AM::Server::m_update_items() {
         const Player* player = &it->second;
 
         AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::ITEM_UPDATE);
+        uint32_t num_items_nearby = 0;
 
-        for(size_t i = 0; i < this->dropped_items.size(); i++) {
-            AM::ItemBase* item = &this->dropped_items[i];
+        for(auto item_it = this->dropped_items.begin(); 
+                item_it != this->dropped_items.end(); ++item_it) {
+            AM::ItemBase* item = &item_it->second;
+
+            if(player->pos.distance(AM::Vec3(item->pos_x, item->pos_y, item->pos_z))
+                    > m_config.item_near_distance) {
+                continue; // Too far away to care.
+            }
 
             AM::packet_write_int(&m_udp_handler.packet, {
                     item->uuid,
@@ -201,9 +216,13 @@ void AM::Server::m_update_items() {
             });
             AM::packet_write_string(&m_udp_handler.packet, item->entry_name);
             AM::packet_write_separator(&m_udp_handler.packet);
+            
+            num_items_nearby++;
         }
 
-        m_udp_handler.send_packet(player->id);
+        if(num_items_nearby) {
+            m_udp_handler.send_packet(player->id);
+        }
     }
 
     this->dropped_items_mutex.unlock();
@@ -223,7 +242,6 @@ void AM::Server::m_update_loop_th__func() {
 
 void AM::Server::m_userinput_handler_th__func() {
     std::string input;
-    input.reserve(256);
 
     while(m_keep_threads_alive) {
 
@@ -269,7 +287,7 @@ void AM::Server::m_userinput_handler_th__func() {
 }
             
             
-bool AM::Server::parse_item_list(const char* item_list_path) {
+bool AM::Server::m_parse_item_list(const std::string& item_list_path) {
     std::fstream item_list_stream(item_list_path);
     if(!item_list_stream.is_open()) {
         fprintf(stderr, "ERROR! %s: Failed to open item list (%s)\n",
@@ -279,94 +297,22 @@ bool AM::Server::parse_item_list(const char* item_list_path) {
 
     m_item_list = json::parse(item_list_stream);
 
-    this->load_item("apple", AM::ItemID::APPLE);
-    this->load_item("assault_rifle_A", AM::ItemID::M4A16);
-    this->load_item("heavy_axe", AM::ItemID::HEAVY_AXE);
+    this->load_item_template("apple", AM::ItemID::APPLE);
+    this->load_item_template("assault_rifle_A", AM::ItemID::M4A16);
+    this->load_item_template("heavy_axe", AM::ItemID::HEAVY_AXE);
 
 
     return true;
 }
 
-void AM::Server::load_item(const char* entry_name, AM::ItemID item_id) {
+void AM::Server::load_item_template(const char* entry_name, AM::ItemID item_id) {
     std::cout 
         << __func__
         << "(\""
         << entry_name
         << "\") -> " << m_item_list[entry_name].dump(4) << std::endl;
     
-    this->items[item_id].load_info(m_item_list, item_id, entry_name);
-
-    /*
-    AM::ItemBase item;
-    item.max_stack = 1;
-    item.pos_x = 0;
-    item.pos_y = 0;
-    item.pos_z = 0;
-    item.lifetime_ticks = 0;
-    item.id = item_id;
-    item.uuid = 0;
-    std::string display_name = m_item_list[entry_name]["display_name"].template get<std::string>();
-    std::string description = m_item_list[entry_name]["description"].template get<std::string>();
-
-    // Load general item data first.
-
-    const size_t entry_name_size = strlen(entry_name);
-    if(entry_name_size >= AM::ITEM_MAX_ENTRY_NAME_SIZE) {
-        fprintf(stderr, "ERROR! %s: entry_name (%s) is too long.\n",
-                __func__, entry_name);
-        return;
-    }
-
-    memmove(item.entry_name,    entry_name,       entry_name_size);
-    //memmove(item.display_name,  &display_name[0], display_name.size());
-    //memmove(item.desc,          &description[0],  description.size());
-    
-    const std::string category = m_item_list[entry_name]["category"].template get<std::string>();
-
-    // Load category specific item data.
-
-    if(category == "FOOD") {
-        item.type = AM::ItemType::FOOD;
-        item.food.eat_benefit  = m_item_list[entry_name]["eat_benefit"].template get<int>();
-        item.max_stack         = m_item_list[entry_name]["max_stack"].template get<int>();
-    } 
-    else
-    if(category == "TOOL") {
-        item.type = AM::ItemType::TOOL;
-        item.tool.max_usage  = m_item_list[entry_name]["max_usage"].template get<int>();
-        item.tool.usage_cost  = m_item_list[entry_name]["usage_cost"].template get<int>();
-        item.tool.usage = 0;
-        item.max_stack         = m_item_list[entry_name]["max_stack"].template get<int>();
-    }
-    else
-    if(category == "WEAPON") {
-        item.type = AM::ItemType::WEAPON;
-        item.weapon.accuracy     = m_item_list[entry_name]["accuracy"].template get<float>();
-        item.weapon.base_damage  = m_item_list[entry_name]["base_damage"].template get<float>();
-        item.weapon.recoil       = m_item_list[entry_name]["recoil"].template get<float>();
-        item.weapon.firerate     = m_item_list[entry_name]["firerate"].template get<float>();
-        item.weapon.firemode     = 0;
-        json firemode = m_item_list[entry_name]["firemode"];
-
-        std::string firemode_name;
-        for(const json& j : firemode) {
-            firemode_name = j.template get<std::string>();
-            if(firemode_name == "SEMI_AUTO") {
-                item.weapon.firemode |= AM::FireMode::SEMI_AUTO;
-            }
-            else
-            if(firemode_name == "FULL_AUTO") {
-                item.weapon.firemode |= AM::FireMode::FULL_AUTO;
-            }
-        }
-    }
-    else {
-        fprintf(stderr, "ERROR! %s: \"%s\" is missing category.\n",
-                __func__, entry_name);
-        return;
-    }
-    */
-
+    this->item_templates[item_id].load_info(m_item_list, item_id, entry_name);
 }
 
 
@@ -378,22 +324,29 @@ void AM::Server::spawn_item(AM::ItemID item_id, int count, const Vec3& pos) {
     }
     
     this->dropped_items_mutex.lock();
-        
-    this->dropped_items.push_back(this->items[item_id]);
-    AM::ItemBase& item = this->dropped_items.back();
-    item.pos_x = pos.x;
-    item.pos_y = pos.y;
-    item.pos_z = pos.z;
-    item.lifetime_ticks = 0;
-    item.uuid = std::rand();
-
+    
+    int item_uuid = std::rand();
+    auto itembase = this->dropped_items.insert({ item_uuid, this->item_templates[item_id] }).first;
+    if(itembase == this->dropped_items.end()) {
+        fprintf(stderr, "ERROR! %s: Failed to insert item into dropped_items (unordered_map). "
+                "UUID may already exist??\n",
+                __func__);
+        return;
+    }
+    
+    itembase->second.pos_x = pos.x;
+    itembase->second.pos_y = pos.y;
+    itembase->second.pos_z = pos.z;
+    itembase->second.uuid = item_uuid;
+    itembase->second.lifetime_ticks = 0;
+    
     printf("%s -> \"%s\" XYZ = (%0.1f, %0.1f, %0.1f) UUID = %i\n", 
             __func__, 
-            item.entry_name,
+            itembase->second.entry_name,
             pos.x,
             pos.y,
             pos.z,
-            item.uuid);
+            item_uuid);
     
     this->dropped_items_mutex.unlock();
 }

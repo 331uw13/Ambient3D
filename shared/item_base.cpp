@@ -14,12 +14,8 @@ void AM::ItemBase::load_info(const json& item_list, AM::ItemID item_id, const ch
         return;
     }
     this->max_stack = 1;
-    this->pos_x = 0;
-    this->pos_y = 0;
-    this->pos_z = 0;
     this->lifetime_ticks = 0;
     this->id = item_id;
-    this->uuid = std::rand();
 
     const json& item_json = item_list[entry_name];
 

@@ -53,7 +53,7 @@ namespace AM {
             char      description   [ITEM_MAX_DESC_SIZE+1] { 0 };
             char      model_path    [ITEM_MAX_MODELPATH_SIZE+1] { 0 };
             uint8_t   max_stack;
-            int       uuid;
+            int       uuid; // UUID is only modified by the server.
 
             float pos_x;
             float pos_y;

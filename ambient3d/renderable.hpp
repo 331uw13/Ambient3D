@@ -46,7 +46,7 @@ namespace AM {
     class Renderable {
         public:
 
-            void load(const char* path,
+            bool load(const char* path,
                     std::initializer_list<Shader> shaders,  int load_flags = 0);
 
             // Guranteed to be NULL terminated.

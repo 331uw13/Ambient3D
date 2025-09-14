@@ -62,6 +62,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
                 ));  
 
 
+    m_item_manager.set_item_default_shader(this->shaders[AM::ShaderIDX::DEFAULT]);
     SetTraceLogLevel(LOG_NONE);
 
 
@@ -125,6 +126,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
         { chatbox->push_message(r, g, b, str); };
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
+    this->net->assign_item_manager(&m_item_manager);
     
 }
 
@@ -304,6 +306,15 @@ void AM::State::draw_info() {
 
 
 void AM::State::m_render_dropped_items() {
+    
+    auto items = m_item_manager.get_dropped_items();
+
+    for(auto it = items->begin(); it != items->end(); ++it) {
+        const AM::Item* item = &it->second;
+       
+        *item->renderable->transform = MatrixTranslate(item->pos_x, item->pos_y, item->pos_z);
+        item->renderable->render();
+    }
 }
         
 void AM::State::frame_begin() {

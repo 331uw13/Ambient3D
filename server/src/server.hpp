@@ -11,8 +11,8 @@
 #include <nlohmann/json.hpp>
 
 #include "networking_agreements.hpp"
+#include "config.hpp"
 
-//#include "tcp_session.hpp"
 #include "udp_handler.hpp"
 #include "player.hpp"
 
@@ -31,10 +31,15 @@ namespace AM {
     class Server {
         public:
 
+            Server(asio::io_context& context, const AM::ServerCFG& cfg)/* :
+                m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), cfg.tcp_port)),
+                m_udp_handler(context, cfg.udp_port) {}*/;
+            
+            /*
             Server(asio::io_context& context, uint16_t tcp_port, uint16_t udp_port) :
                 m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), tcp_port)),
                 m_udp_handler(context, udp_port) {}
-
+            */
             ~Server();
 
             void start(asio::io_context& io_context);
@@ -42,9 +47,13 @@ namespace AM {
             std::mutex                          players_mutex;
             std::map<int/*player_id*/, Player>  players;
            
-            std::array<AM::ItemBase, AM::NUM_ITEMS> items;
-            std::vector<AM::ItemBase>               dropped_items;
-            std::mutex                              dropped_items_mutex;
+            // 'item_templates' is an array of item info loaded from items/item_list.json
+            // when server spawns an item 
+            // the corresponding item template is copied and
+            // modified before its then inserted into dropped_items
+            std::array<AM::ItemBase, AM::NUM_ITEMS>            item_templates;
+            std::unordered_map<int/*item uuid*/, AM::ItemBase> dropped_items;
+            std::mutex                                         dropped_items_mutex;
 
             void        remove_player     (int player_id);
             AM::Player* get_player_by_id  (int player_id);
@@ -52,8 +61,7 @@ namespace AM {
             void spawn_item(AM::ItemID item_id, int count, const Vec3& pos);
             void broadcast_msg(AM::PacketID packet_id, const std::string& str);
 
-            bool parse_item_list(const char* item_list_path);
-            void load_item(const char* entry_name, AM::ItemID item_id);
+            void load_item_template(const char* entry_name, AM::ItemID item_id);
 
             std::atomic<bool> show_debug_info { false };
 
@@ -64,6 +72,7 @@ namespace AM {
             void         m_update_players();
             void         m_update_items();
 
+            bool         m_parse_item_list(const std::string& item_list_path);
             json         m_item_list;
 
             void         m_userinput_handler_th__func();
@@ -80,6 +89,8 @@ namespace AM {
 
             // UDP is used for gameplay packets.
             UDP_handler m_udp_handler;
+    
+            ServerCFG m_config;
     };
 };
 

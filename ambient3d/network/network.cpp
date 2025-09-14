@@ -25,7 +25,7 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             break;
 
         case AM::PacketID::SAVE_ITEM_LIST:
-            //m_engine_item_manager->assign_item_list(json::parse(m_tcprecv_data));
+            m_engine_item_manager->assign_item_list(json::parse(m_tcprecv_data));
             printf("[NETWORK]: Got item list from server.\n");
             break;
 

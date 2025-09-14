@@ -1,6 +1,7 @@
 #ifndef AMBIENT3D_ITEM_HPP
 #define AMBIENT3D_ITEM_HPP
 
+#include <memory>
 
 #include "item_base.hpp"
 #include "renderable.hpp"
@@ -12,10 +13,10 @@ namespace AM {
     class Item : public AM::ItemBase {
         public:
 
-            Renderable* renderable { NULL };
-            Texture inv_texture; // Inventory texture.  TODO: Create tool for this
+            std::shared_ptr<AM::Renderable> renderable;
+            //Texture inv_texture; // Inventory texture.  TODO: Create tool for this
 
-            float inactive_time;
+            //float inactive_time;
 
         private:
 
