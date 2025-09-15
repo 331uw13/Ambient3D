@@ -57,6 +57,8 @@ bool AM::Renderable::load(
     // Name will be used for better error messages.
     m_name_from_path(path);
 
+    this->boundingbox = GetModelBoundingBox(m_model);
+
     //mesh_attribute(0, MeshAttrib{}); // Add default mesh attribute.
     this->transform = &m_model.transform;
     m_loaded = true;
@@ -131,7 +133,8 @@ void AM::Renderable::render() {
         mat.maps[MATERIAL_MAP_DIFFUSE].color = mesh_attr.tint;
 
         AM::set_uniform_int(mat.shader.id, "u_affected_by_wind", mesh_attr.affected_by_wind);
-        AM::set_uniform_float(mat.shader.id, "u_material_shine", mesh_attr.shine);
+        AM::set_uniform_float(mat.shader.id, "u_material_shine_level", mesh_attr.shine);
+        AM::set_uniform_float(mat.shader.id, "u_material_specular", mesh_attr.specular);
         
         DrawMesh(m_model.meshes[i], mat, 
                 (this->mesh_transforms == NULL) 
@@ -139,7 +142,8 @@ void AM::Renderable::render() {
                 : MatrixMultiply(this->mesh_transforms[i], m_model.transform)
                 );
         
-        AM::set_uniform_float(mat.shader.id, "u_material_shine", 1.0);
+        AM::set_uniform_float(mat.shader.id, "u_material_shine_level", MATERIAL_DEFAULT_SHINE);
+        AM::set_uniform_float(mat.shader.id, "u_material_specular", MATERIAL_DEFAULT_SPECULAR);
     
         if(mesh_attr.render_backface) {
             rlEnableBackfaceCulling();

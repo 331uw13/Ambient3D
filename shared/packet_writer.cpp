@@ -27,6 +27,14 @@ void AM::packet_prepare(AM::Packet* packet, AM::PacketID packet_id) {
     packet->size += sizeof(AM::PacketID);
     packet->status = AM::PacketStatus::PREPARED;
 }
+    
+void AM::packet_write(Packet* packet, void* data, size_t size) {
+    if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }
+    if(!_write_bytes(packet, data, size)) {
+        return;
+    }
+    packet->status = AM::PacketStatus::HAS_DATA;   
+}
 
 void AM::packet_write_string(AM::Packet* packet, const std::string& str) {
     if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }

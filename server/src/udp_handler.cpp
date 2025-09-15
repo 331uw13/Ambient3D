@@ -7,7 +7,6 @@
 
 
 void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
-
     AM::PacketID packet_id = AM::parse_network_packet(m_data, sizeb);
     if(packet_id == AM::PacketID::NONE) {
         return;
@@ -20,7 +19,6 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
         }
         printf("\n");
     }
-
 
     switch(packet_id) {
 
@@ -38,6 +36,8 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
                 if(!player) {
                     return;
                 }
+                
+                m_server->players_mutex.lock();
 
                 const auto search = m_recv_endpoints.find(player_id);
                 if(search == m_recv_endpoints.end()) {
@@ -47,6 +47,7 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
                 AM::packet_prepare(&player->tcp_session->packet, AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED);
                 AM::packet_write_int(&player->tcp_session->packet, { 1 });
                 player->tcp_session->send_packet();
+                m_server->players_mutex.unlock();
             }
             break;
 
@@ -112,6 +113,10 @@ void AM::UDP_handler::send_packet(int player_id) {
     if(endpoint == m_recv_endpoints.end()) {
         fprintf(stderr, "ERROR! No UDP endpoint was found for player id (%i)\n",
                 player_id);
+
+        // Add player id to queue for trying to send player id to client again
+        // so the client will be connected.
+        m_server->resend_player_id_queue.push_back(player_id);
         return;
     } 
 

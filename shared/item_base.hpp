@@ -59,8 +59,6 @@ namespace AM {
             float pos_y;
             float pos_z;
 
-            int   lifetime_ticks; // (only used by server)
-            
             ItemType  type;
             ItemID    id;
 

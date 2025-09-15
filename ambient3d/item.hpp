@@ -16,7 +16,9 @@ namespace AM {
             std::shared_ptr<AM::Renderable> renderable;
             //Texture inv_texture; // Inventory texture.  TODO: Create tool for this
 
-            //float inactive_time;
+            // How long the item has been far away from the player.
+            // ItemManager uses this to unload unused items.
+            float inactive_time;
 
         private:
 

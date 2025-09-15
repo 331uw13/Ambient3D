@@ -24,11 +24,6 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             m_msg_recv_callback(255, 200, 50, m_tcprecv_data);
             break;
 
-        case AM::PacketID::SAVE_ITEM_LIST:
-            m_engine_item_manager->assign_item_list(json::parse(m_tcprecv_data));
-            printf("[NETWORK]: Got item list from server.\n");
-            break;
-
         case AM::PacketID::PLAYER_ID:
             if(sizeb != sizeof(this->player_id)) {
                 fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
@@ -37,15 +32,35 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             }
             memmove(&this->player_id, m_tcprecv_data, sizeof(this->player_id));
 
+            // TODO: Get rid of this. it can be done differently.
             // Now send the received player id via UDP
             // so the server can save the endpoint.
             AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_ID);
             AM::packet_write_int(&this->packet, { this->player_id });
             this->send_packet(AM::NetProto::UDP);
+           
+            // Tell server client connected successfully.
+            AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_CONNECTED);
+            AM::packet_write_int(&this->packet, { this->player_id });
+            this->send_packet(AM::NetProto::TCP);
             break;
 
         case AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED:
             m_msg_recv_callback(120, 255, 120, "Connected!");
+            break;
+
+        case AM::PacketID::SAVE_ITEM_LIST:
+            m_engine_item_manager->set_item_list(json::parse(m_tcprecv_data));
+            printf("[NETWORK]: Received server item list.\n");
+
+            AM::packet_prepare(&this->packet, AM::PacketID::GET_SERVER_CONFIG);
+            this->send_packet(AM::NetProto::TCP);
+            break;
+
+        case AM::PacketID::SERVER_CONFIG:
+            printf("[NETWORK]: Received server configuration.\n");
+            this->server_cfg.parse_from_memory(json::parse(m_tcprecv_data));
+            m_engine_item_manager->set_server_config(this->server_cfg);
             break;
 
     }

@@ -14,7 +14,6 @@ void AM::ItemBase::load_info(const json& item_list, AM::ItemID item_id, const ch
         return;
     }
     this->max_stack = 1;
-    this->lifetime_ticks = 0;
     this->id = item_id;
 
     const json& item_json = item_list[entry_name];

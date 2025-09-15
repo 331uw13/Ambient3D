@@ -1,9 +1,11 @@
 #ifndef AMBIENT3D_SERVER_PLAYER_HPP
 #define AMBIENT3D_SERVER_PLAYER_HPP
 
+#include <unordered_map>
 
 #include "tcp_session.hpp"
 #include "vec3.hpp"
+#include "terrain/chunk.hpp"
 
 
 namespace AM {
@@ -15,6 +17,7 @@ namespace AM {
             Player(std::shared_ptr<TCP_session> _tcp_session);
            
             std::shared_ptr<TCP_session> tcp_session;
+            std::unordered_map<AM::ChunkID, bool> loaded_chunk_ids;
 
             int id           { -1 };
             Vec3 pos         { 0, 0, 0 };

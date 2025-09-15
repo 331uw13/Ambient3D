@@ -2,7 +2,6 @@
 
 
 #include "player.hpp"
-#include "chunk.hpp"
 #include "util.hpp"
 #include "ambient3d.hpp"
 
@@ -108,11 +107,13 @@ void AM::Player::update_movement(State* st, bool handle_user_input) {
     }
 
     if(!this->noclip) {
+        /*
         if(handle_user_input && IsKeyPressed(KEY_SPACE)) {
             this->jump();
         }
         m_update_gravity(st);
         m_update_slide();
+        */
     }
     else 
     if(handle_user_input) {
@@ -136,16 +137,17 @@ void AM::Player::update_movement(State* st, bool handle_user_input) {
     this->cam.position = this->pos;
     this->cam.target = Vector3Add(this->pos, cam_dir);
 
+    /*
     this->chunk_x = (int)floor(this->pos.x / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
     this->chunk_z = (int)floor(this->pos.z / (AM::CHUNK_SIZE * AM::CHUNK_SCALE));
-
+    */
     constexpr float MOVING_TRESHOLD = 0.3f;
     if(Vector3Length(this->movement) > MOVING_TRESHOLD) {
         this->is_moving = true;
     }
 
 }
-
+/*
 void AM::Player::m_update_slide() {
     const float dt = GetFrameTime();
     if(m_sliding || (!m_sliding && !this->on_ground)) {
@@ -185,13 +187,14 @@ void AM::Player::m_update_slide() {
 
     m_sliding = true;
 }
+*/
 
 void AM::Player::jump() {
     if(m_num_jumps_left <= 0) {
         return;
     }
 
-    m_sliding = false;
+    //m_sliding = false;
 
     this->vel.y = -20;
     m_num_jumps_left--;
@@ -200,7 +203,8 @@ void AM::Player::jump() {
 
 void AM::Player::m_update_gravity(State* st) {
     this->pos_prevframe = this->pos;
-   
+
+    /*
     float terrain_level = st->terrain.get_height(this->pos.x, this->pos.z, &this->terrain_normal);
     this->on_ground = ((this->pos.y - this->height) < terrain_level);
 
@@ -222,8 +226,9 @@ void AM::Player::m_update_gravity(State* st) {
         m_Yvelocity_in_air = this->vel.y;
         AMutil::clamp<float>(m_Yvelocity_in_air, 0.0f, 30.0f);
     }
+    */
         
-    m_jumped = false;
+    //m_jumped = false;
 }
  
 void AM::Player::update_camera() {

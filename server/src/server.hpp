@@ -11,12 +11,12 @@
 #include <nlohmann/json.hpp>
 
 #include "networking_agreements.hpp"
-#include "config.hpp"
+#include "server_config.hpp"
 
 #include "udp_handler.hpp"
 #include "player.hpp"
-
 #include "item_base.hpp"
+#include "terrain/terrain.hpp"
 
 
 using json = nlohmann::json;
@@ -31,16 +31,10 @@ namespace AM {
     class Server {
         public:
 
-            Server(asio::io_context& context, const AM::ServerCFG& cfg)/* :
-                m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), cfg.tcp_port)),
-                m_udp_handler(context, cfg.udp_port) {}*/;
-            
-            /*
-            Server(asio::io_context& context, uint16_t tcp_port, uint16_t udp_port) :
-                m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), tcp_port)),
-                m_udp_handler(context, udp_port) {}
-            */
+            Server(asio::io_context& context, const AM::ServerCFG& cfg);
             ~Server();
+            
+            ServerCFG config;
 
             void start(asio::io_context& io_context);
             
@@ -51,12 +45,15 @@ namespace AM {
             // when server spawns an item 
             // the corresponding item template is copied and
             // modified before its then inserted into dropped_items
+            json item_list;
             std::array<AM::ItemBase, AM::NUM_ITEMS>            item_templates;
             std::unordered_map<int/*item uuid*/, AM::ItemBase> dropped_items;
             std::mutex                                         dropped_items_mutex;
 
             void        remove_player     (int player_id);
             AM::Player* get_player_by_id  (int player_id);
+
+            AM::Terrain terrain;
 
             void spawn_item(AM::ItemID item_id, int count, const Vec3& pos);
             void broadcast_msg(AM::PacketID packet_id, const std::string& str);
@@ -65,21 +62,30 @@ namespace AM {
 
             std::atomic<bool> show_debug_info { false };
 
+            // If client doesnt respond correctly to PLAYER_ID packet
+            // or never got it. This array is for resending them.
+            std::vector<int/*player id*/> resend_player_id_queue;
+
         private:
 
             std::atomic<bool> m_keep_threads_alive { true };
 
-            void         m_update_players();
-            void         m_update_items();
+            void         m_send_player_updates();
+            void         m_send_item_updates();
+            void         m_send_player_chunk_updates();
+            void         m_process_resend_id_queue();
 
             bool         m_parse_item_list(const std::string& item_list_path);
-            json         m_item_list;
 
             void         m_userinput_handler_th__func();
             std::thread  m_userinput_handler_th;
 
             void         m_update_loop_th__func();
             std::thread  m_update_loop_th;
+
+            void         m_worldgen_th__func();
+            std::thread  m_worldgen_th;
+            int          m_worldgen_seed { 0 }; // <- Not curently used but for future improvements.
 
             // TCP is used for chat.
             tcp::acceptor m_tcp_acceptor;
@@ -90,7 +96,6 @@ namespace AM {
             // UDP is used for gameplay packets.
             UDP_handler m_udp_handler;
     
-            ServerCFG m_config;
     };
 };
 

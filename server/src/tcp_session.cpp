@@ -36,24 +36,44 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
 
     switch(packet_id) {
         case AM::PacketID::CHAT_MESSAGE:
-            if(sizeb == 0) { return; }
-            if(sizeb > 512) {
-                fprintf(stderr, "[CHAT_WARNING]: Ignored %li long message.\n", sizeb);
-                return;
-            }
-
-            // Allow only printable ascii characters.
-            // TODO: Good idea is to add support for different languages.
-            for(size_t i = 0; i < sizeb; i++) {
-                if((m_data[i] < 0x20) || (m_data[i] > 0x7E)) {
+            {
+                if(sizeb == 0) { return; }
+                if(sizeb > 512) {
+                    fprintf(stderr, "[CHAT_WARNING]: Ignored %li long message.\n", sizeb);
                     return;
                 }
-            }
 
-            printf("[CHAT(%li)]: %s\n", sizeb, m_data);
-            m_server->broadcast_msg(AM::PacketID::CHAT_MESSAGE, m_data);
+                // Allow only printable ascii characters.
+                // TODO: Good idea is to add support for different languages.
+                for(size_t i = 0; i < sizeb; i++) {
+                    if((m_data[i] < 0x20) || (m_data[i] > 0x7E)) {
+                        return;
+                    }
+                }
+
+                printf("[CHAT(%li)]: %s\n", sizeb, m_data);
+                m_server->broadcast_msg(AM::PacketID::CHAT_MESSAGE, m_data);
+            }
             break;
 
+        case AM::PacketID::PLAYER_CONNECTED:
+            {
+                printf("PLAYER CONNECTED ID = %i\n", this->player_id);
+                
+                // Send item list.
+                AM::packet_prepare(&this->packet, AM::PacketID::SAVE_ITEM_LIST);
+                AM::packet_write_string(&this->packet, m_server->item_list.dump());
+                this->send_packet();    
+            }
+            break;
+
+        case AM::PacketID::GET_SERVER_CONFIG:
+            {
+                AM::packet_prepare(&this->packet, AM::PacketID::SERVER_CONFIG);
+                AM::packet_write_string(&this->packet, m_server->config.json_data.c_str());
+                this->send_packet(); 
+            }
+            break;
         // ...
     }
 }

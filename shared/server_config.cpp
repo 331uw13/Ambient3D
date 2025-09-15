@@ -1,0 +1,28 @@
+#include <fstream>
+#include "server_config.hpp"
+
+
+AM::ServerCFG::ServerCFG(const char* json_cfg_path) {
+
+    std::fstream stream(json_cfg_path);
+    if(!stream.is_open()) {
+        fprintf(stderr, "ERROR! %s: Failed to open server configuration file (%s)\n",
+                __func__, json_cfg_path);
+        return;
+    }
+
+    json data = json::parse(stream);
+    this->parse_from_memory(data);
+}
+
+void AM::ServerCFG::parse_from_memory(const json& data) {
+    this->tcp_port = data["tcp_port"].template get<int>();
+    this->udp_port = data["udp_port"].template get<int>();
+    this->item_list_path = data["item_list_path"].template get<std::string>();
+    this->item_near_distance = data["item_near_distance"].template get<float>();
+    this->chunk_size = data["chunk_size"].template get<int>();
+    this->render_distance = data["render_distance"].template get<int>();
+
+    this->json_data = data.dump();
+}
+

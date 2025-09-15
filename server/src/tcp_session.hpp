@@ -29,6 +29,7 @@ namespace AM {
             void send_packet();
             
             int  player_id;
+            bool identity_confirmed;
 
 
         private:

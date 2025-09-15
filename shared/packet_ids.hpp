@@ -23,6 +23,22 @@ namespace AM {
         CHAT_MESSAGE,    // (tcp only)
         SERVER_MESSAGE,  // (tcp only)
 
+
+        // ----------- Connection packets -------------
+
+        /* Connection to server will work like this:
+
+            Sender/Receiver  |  PacketID  |  Protocol
+            -------------------------------------------------
+            Server -> Client  (PLAYER_ID)                (TCP)
+            Server <- Client  (PLAYER_ID)                (UDP)
+            Server -> Client  (PLAYER_ID_HAS_BEEN_SAVED) (TCP)
+            Server <- Client  (PLAYER_CONNECTED)         (TCP)
+            Server -> Client  (SAVE_ITEM_LIST)           (TCP)
+            Server <- Client  (GET_SERVER_CONFIG)        (TCP)
+            Server -> Client  (SERVER_CONFIG)            (TCP)
+        */
+
         // Server will send player their id when they are connected (via TCP)
         // Then the client will reply with their ID via UDP protocol,
         // that process saves the client's udp endpoint.
@@ -32,6 +48,10 @@ namespace AM {
         // this packet via TCP
         PLAYER_ID_HAS_BEEN_SAVED,
 
+        // ^-- After client got PLAYER_ID_HAS_BEEN_SAVED.
+        // it will send this packet and then wait for SAVE_ITEM_LIST packet to arrive.
+        PLAYER_CONNECTED, // (tcp only)
+        
         // Server is going to send full list of items to client when they connect.
         // The client should save the list for future use.
         //
@@ -41,8 +61,39 @@ namespace AM {
         // 4            :  JSON data        (char array)
         //
         SAVE_ITEM_LIST, // (tcp only)
+       
+        // Client can ask the server for its configuration
+        // for many purposes.
+        GET_SERVER_CONFIG, // (tcp only)
 
-        // This packet contains the player's requested position in the world.
+        // ^-- Server should repond to that packet with this one:
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Config json      (char array)
+        SERVER_CONFIG,  // (tcp only)
+
+        // --------- End Connection packets -----------
+
+
+        // World generation is server side.
+        // This packet can send chunk data to client.
+        // TODO: It is probably good idea to compress these packets in the future.
+        //
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Chunk ID         (int)
+        // 8            :  Chunk X          (int)
+        // 12           :  Chunk Z          (int)
+        // 16           :  Chunk data       (float array)
+        // 
+        // NOTES:
+        // The packet may contain more than one chunk.
+        // The chunk data size is equal to (server_config.chunk_size * server_config.chunk_size)
+        CHUNK_DATA, // (tcp only)
+
+        // This packet contains the player's position in the world.
         // It also has camera pitch, yaw and animation information.
         // The client side position is always a "request" to the server.
         //
@@ -74,7 +125,7 @@ namespace AM {
         // NOTES:
         // The packet may contain multiple items.
         // To separate items 'AM::PACKET_DATA_SEPARATOR' 
-        // is used after (byte offset 20 + item entry name size)
+        // is used after (byte offset 24 + item entry name size)
         // AM::PACKET_DATA_SEPARATOR is defined in "networking_agreement.hpp"
         ITEM_UPDATE, // (udp only)
        
@@ -83,6 +134,7 @@ namespace AM {
     namespace PacketSize {
         static constexpr size_t PLAYER_MOVEMENT_AND_CAMERA = 28;
         static constexpr size_t PLAYER_ID = 4;
+        static constexpr size_t PLAYER_CONNECTED = 4;
     };
 };
 

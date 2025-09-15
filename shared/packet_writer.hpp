@@ -31,6 +31,7 @@ namespace AM {
     // NOTE: writing will fail silently if the packet is not prepared.
 
     void packet_prepare         (Packet* packet, AM::PacketID packet_id);
+    void packet_write           (Packet* packet, void* data, size_t size);
     void packet_write_string    (Packet* packet, const std::string& str);
     void packet_write_int       (Packet* packet, std::initializer_list<int> list);
     void packet_write_float     (Packet* packet, std::initializer_list<float> list);

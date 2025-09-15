@@ -75,7 +75,8 @@ namespace AM {
             uniform sampler2D texture0;
             uniform vec4 colDiffuse;
             uniform vec3 u_view_pos;
-            uniform float u_material_shine;
+            uniform float u_material_shine_level;
+            uniform float u_material_specular;
 
             out vec4 out_color;
 
@@ -86,7 +87,8 @@ namespace AM {
                     frag_position,
                     frag_normal,
                     u_view_pos,
-                    u_material_shine
+                    u_material_shine_level,
+                    u_material_specular
                     );
                 out_color = (tex * colDiffuse) * vec4(lights, 1.0);
             }
@@ -112,7 +114,8 @@ namespace AM {
                 vec3 frag_pos,
                 vec3 frag_n,
                 vec3 view_pos,
-                float material_shine
+                float material_shine_level,
+                float material_specular
             ){
                 vec3 final = vec3(0, 0, 0);
                 vec3 normal = normalize(frag_n);
@@ -133,9 +136,9 @@ namespace AM {
                     vec3 diffuse = diff * light_color;
 
                     // Specular.
-                    float spec = pow(max(dot(view_dir, reflect(-light_dir, normal)), 0.0), material_shine);
-                    vec3 specular = spec * mix(vec3(1.0, 1.0, 1.0), light_color, 0.675);
-                    specular *= material_shine;
+                    float spec = pow(max(dot(view_dir, reflect(-light_dir, normal)), 0.0), material_specular);
+                    vec3 specular = spec * mix(vec3(1.0, 1.0, 1.0), light_color, 0.6);
+                    specular *= material_shine_level;
 
                     // Attenuation.
                     float L = 0.8;

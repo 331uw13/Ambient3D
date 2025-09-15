@@ -15,7 +15,7 @@ AM::Server::Server(asio::io_context& context, const AM::ServerCFG& cfg) :
     m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), cfg.tcp_port)),
     m_udp_handler(context, cfg.udp_port)
 {
-    m_config = cfg;
+    config = cfg;
     if(m_parse_item_list(cfg.item_list_path)) {
         this->start(context);
     }
@@ -32,6 +32,8 @@ void AM::Server::start(asio::io_context& io_context) {
     m_udp_handler.start(this);
     m_do_accept_TCP();
 
+    this->terrain.set_server(this);
+
     // Set random seed to current time.
     std::srand(std::time({}));
 
@@ -47,17 +49,26 @@ void AM::Server::start(asio::io_context& io_context) {
     // Start the updater loop.
     m_update_loop_th =
         std::thread(&AM::Server::m_update_loop_th__func, this);
+    
+    // Start world generator.
+    m_worldgen_th =
+        std::thread(&AM::Server::m_worldgen_th__func, this);
 
     // Spawn items for testing
     this->spawn_item(AM::ItemID::M4A16, 1, Vec3{ 3, 3, 16 });
     this->spawn_item(AM::ItemID::HEAVY_AXE, 1, Vec3{ 6, 3, -40 });
 
+
     // Input handler may tell to shutdown.
     m_userinput_handler_th.join();
+    m_worldgen_th.join();
+
 
     io_context.stop();
     event_handler.join();
     m_update_loop_th.join();
+    
+    this->terrain.delete_terrain();
 }
 
             
@@ -95,20 +106,13 @@ void AM::Server::m_do_accept_TCP() {
                 Player player(std::make_shared<TCP_session>(std::move(socket), this, player_id));
                 player.id = player_id;
 
-                player.tcp_session->start();
                 this->players.insert(std::make_pair(player_id, player));
                 this->players_mutex.unlock();
 
-                printf("[+] Player joined! ID = %i\n", player_id);
-
-                // Send player id.
+                player.tcp_session->start();
+                
                 AM::packet_prepare  (&player.tcp_session->packet, AM::PacketID::PLAYER_ID);
                 AM::packet_write_int(&player.tcp_session->packet, { player_id });
-                player.tcp_session->send_packet();
-
-                // Send item list.
-                AM::packet_prepare(&player.tcp_session->packet, AM::PacketID::SAVE_ITEM_LIST);
-                AM::packet_write_string(&player.tcp_session->packet, m_item_list.dump());
                 player.tcp_session->send_packet();
 
                 m_do_accept_TCP();
@@ -144,7 +148,7 @@ void AM::Server::broadcast_msg(AM::PacketID packet_id, const std::string& msg) {
 }
 
 
-void AM::Server::m_update_players() {
+void AM::Server::m_send_player_updates() {
     this->players_mutex.lock();
 
     // Tell players each others position, camera yaw and pitch.
@@ -180,7 +184,7 @@ void AM::Server::m_update_players() {
     this->players_mutex.unlock();
 }
 
-void AM::Server::m_update_items() {
+void AM::Server::m_send_item_updates() {
     if(this->dropped_items.empty()) {
         return;
     }
@@ -201,7 +205,7 @@ void AM::Server::m_update_items() {
             AM::ItemBase* item = &item_it->second;
 
             if(player->pos.distance(AM::Vec3(item->pos_x, item->pos_y, item->pos_z))
-                    > m_config.item_near_distance) {
+                    > config.item_near_distance) {
                 continue; // Too far away to care.
             }
 
@@ -228,17 +232,121 @@ void AM::Server::m_update_items() {
     this->dropped_items_mutex.unlock();
 }
 
+void AM::Server::m_send_player_chunk_updates() {
+    this->players_mutex.lock();
+    this->terrain.chunk_map_mutex.lock();
+            
+    const size_t height_points_size = ((this->config.chunk_size) * (this->config.chunk_size)) * sizeof(float);
+    
+    for(auto it = this->players.begin();
+            it != this->players.end(); ++it) {
+        const Player* player = &it->second;
+
+        AM::packet_prepare(&player->tcp_session->packet, AM::PacketID::CHUNK_DATA);
+        size_t num_chunks = 0;
+
+        this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
+        [this, &num_chunks, &height_points_size, player]
+        (const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos, AM::ChunkID chunk_id) {
+            if(!chunk) { return; }
+
+            /*
+            AM::packet_write_int(&player->tcp_session->packet, { 
+                    chunk_id,
+                    chunk_pos.x,
+                    chunk_pos.z
+                    });
+
+            AM::packet_write(&player->tcp_session->packet, 
+                    (void*)chunk->height_points, (this->config.chunk_size * this->config.chunk_size));
+            num_chunks++;
+            */
+        });
+
+        /*
+        if(num_chunks) {
+            player->tcp_session->send_packet();
+        }
+        */
+
+    }
+
+    this->players_mutex.unlock();
+    this->terrain.chunk_map_mutex.unlock();
+}
+
+void AM::Server::m_process_resend_id_queue() {
+    this->players_mutex.lock();
+    for(int player_id : this->resend_player_id_queue) {
+        AM::Player* player = this->get_player_by_id(player_id);
+        AM::packet_prepare  (&player->tcp_session->packet, AM::PacketID::PLAYER_ID);
+        AM::packet_write_int(&player->tcp_session->packet, { player_id });
+        player->tcp_session->send_packet();
+    }
+    this->players_mutex.unlock();
+
+    this->resend_player_id_queue.clear();
+}
+
 void AM::Server::m_update_loop_th__func() {
     while(m_keep_threads_alive) {
        
-        m_update_players();
-        m_update_items();
+        m_process_resend_id_queue();
+        m_send_player_updates();
+        m_send_player_chunk_updates();
+        m_send_item_updates();
 
         std::this_thread::sleep_for(
                 std::chrono::milliseconds(TICK_SPEED_MS));
     }
 }
 
+void AM::Server::m_worldgen_th__func() {
+    
+    // Generate chunks in 0(x), 0(z)
+    const int chunk_size_half = this->config.chunk_size / 2;
+  
+    for(int z = -chunk_size_half; z < chunk_size_half; z++) {
+        for(int x = -chunk_size_half; x < chunk_size_half; x++) { 
+            Chunk chunk;
+            chunk.generate(this->config, m_worldgen_seed, x, z);
+            this->terrain.add_chunk(chunk);
+        }
+    }
+
+    printf("[WORLD_GEN]: Generated %i chunks for spawn\n", 
+            this->config.chunk_size * this->config.chunk_size);
+
+    while(m_keep_threads_alive) {
+        this->players_mutex.lock();
+        this->terrain.chunk_map_mutex.lock();
+
+        for(auto it = this->players.begin();
+                it != this->players.end(); ++it) {
+            const Player* player = &it->second;
+
+
+            this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
+            [this](const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos, AM::ChunkID chunk_id) {
+                if(!chunk) {
+                    AM::Chunk chunk;
+                    chunk.generate(this->config, m_worldgen_seed, chunk_pos.x, chunk_pos.z);
+                    this->terrain.add_chunk(chunk);    
+                    printf("[WORLD_GEN]: ChunkPos = (%i, %i), ChunkID = %i\n",
+                            chunk_pos.x, chunk_pos.z, chunk_id);
+                }
+            });
+            
+        }
+        
+        this->terrain.chunk_map_mutex.unlock();
+        this->players_mutex.unlock();
+
+
+        std::this_thread::sleep_for(
+                std::chrono::milliseconds(100));
+    }
+}
 
 void AM::Server::m_userinput_handler_th__func() {
     std::string input;
@@ -295,7 +403,7 @@ bool AM::Server::m_parse_item_list(const std::string& item_list_path) {
         return false;
     }
 
-    m_item_list = json::parse(item_list_stream);
+    item_list = json::parse(item_list_stream);
 
     this->load_item_template("apple", AM::ItemID::APPLE);
     this->load_item_template("assault_rifle_A", AM::ItemID::M4A16);
@@ -306,13 +414,14 @@ bool AM::Server::m_parse_item_list(const std::string& item_list_path) {
 }
 
 void AM::Server::load_item_template(const char* entry_name, AM::ItemID item_id) {
+    /*
     std::cout 
         << __func__
         << "(\""
         << entry_name
-        << "\") -> " << m_item_list[entry_name].dump(4) << std::endl;
-    
-    this->item_templates[item_id].load_info(m_item_list, item_id, entry_name);
+        << "\") -> " << item_list[entry_name].dump(4) << std::endl;
+    */
+    this->item_templates[item_id].load_info(item_list, item_id, entry_name);
 }
 
 
@@ -338,7 +447,6 @@ void AM::Server::spawn_item(AM::ItemID item_id, int count, const Vec3& pos) {
     itembase->second.pos_y = pos.y;
     itembase->second.pos_z = pos.z;
     itembase->second.uuid = item_uuid;
-    itembase->second.lifetime_ticks = 0;
     
     printf("%s -> \"%s\" XYZ = (%0.1f, %0.1f, %0.1f) UUID = %i\n", 
             __func__, 

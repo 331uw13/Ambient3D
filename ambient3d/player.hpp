@@ -48,17 +48,17 @@ namespace AM {
         private:
 
             void m_update_gravity(State* st);
-            void m_update_slide();
+            //void m_update_slide();
 
-            float m_slide_boost { false };
+            //float m_slide_boost { false };
             bool m_jumped { false };
             int  m_num_jumps_left { 0 };
-            bool m_sliding { false };
+            //bool m_sliding { false };
 
             // Used for sliding.
             // It is the Y axis velocity while in air
             // and may be reset by 'm_update_slide'
-            float m_Yvelocity_in_air { 0.0f };
+            //float m_Yvelocity_in_air { 0.0f };
     };
 };
 

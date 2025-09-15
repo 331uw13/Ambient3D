@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include "item_manager.hpp"
+#include "raymath.h"
 
             
 AM::ItemManager::ItemManager() {
@@ -19,9 +20,24 @@ AM::ItemManager::~ItemManager() {
 }
 
 
-void AM::ItemManager::update_lifetimes() {
-    // TODO: iterate over items and check their use_count()
-    // if its 1 and some time has passed it can be unloaded.
+void AM::ItemManager::cleanup_unused_items(const Vector3& player_pos) { 
+    for(auto it = m_dropped_items.begin(); it != m_dropped_items.end(); ) {
+        AM::Item* item = &it->second;
+        std::shared_ptr<AM::Renderable>& renderable_ptr = m_item_renderables[item->id];
+        const float dist_to_player = Vector3Distance(player_pos, Vector3(item->pos_x, item->pos_y, item->pos_z));
+        
+
+        if(((dist_to_player > m_server_cfg.item_near_distance)
+        || (renderable_ptr.use_count() == 1))
+        && renderable_ptr->is_loaded()) {
+            renderable_ptr->unload();
+            it = m_dropped_items.erase(it);
+            printf("[ITEM_MANAGER]: Unloaded item \"%s\"\n", item->entry_name);
+        }
+        else {
+            ++it;
+        }
+    }
 }
  
 void AM::ItemManager::m_load_item_data(AM::ItemBase* itembase) {
@@ -47,11 +63,12 @@ void AM::ItemManager::m_load_item_data(AM::ItemBase* itembase) {
             
             renderable->mesh_attribute(mesh_index, 
                     AM::MeshAttrib {
-                        .tint = Color((hex_color >> 16) & 0xFF,
-                                      (hex_color >> 8)  & 0xFF,
-                                      (hex_color)       & 0xFF,
-                                      255),
-                        .shine = mesh_settings["shine"].template get<float>()
+                        .tint = Color((hex_color >> 16) & 0xFF, // Red
+                                      (hex_color >> 8)  & 0xFF, // Green
+                                      (hex_color)       & 0xFF, // Blue
+                                      255),                     // Alpha
+                        .shine = mesh_settings["shine"].template get<float>(),
+                        .specular = mesh_settings["specular"].template get<float>()
                     });
 
             mesh_index++;
@@ -69,7 +86,7 @@ void AM::ItemManager::m_load_item_data(AM::ItemBase* itembase) {
     //printf("USE_COUNT AFTER MOVE = %li\n", m_item_renderables[item.id].use_count());
 
     m_dropped_items.insert(std::make_pair(item.uuid, item));
-    printf("[ITEM_MANAGER]: Loaded item (%s) %i\n", itembase->entry_name, itembase->uuid);
+    printf("[ITEM_MANAGER]: Loaded item \"%s\" %i\n", itembase->entry_name, itembase->uuid);
                     
 }
 

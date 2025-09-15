@@ -21,9 +21,9 @@
         "firerate": 0.35,
         "firemode": [ "SEMI_AUTO", "FULL_AUTO" ],
         "modelmesh_settings": [
-            { "shine": 10.0, "color": "646482" },
-            { "shine": 6.0, "color": "9696A0" },
-            { "shine": 1.0, "color": "707070" }
+            { "shine": 10.0, "specular": 16.0, "color": "646482" },
+            { "shine": 6.0, "specular": 12.0, "color": "9696A0" },
+            { "shine": 1.0, "specular": 4.0, "color": "707070" }
         ]
     },
 
@@ -36,8 +36,8 @@
         "usage_cost": 3,
         "max_stack": 1,
         "modelmesh_settings": [
-            { "shine": 1.0, "color": "A05030" },
-            { "shine": 10.0, "color": "707070" }
+            { "shine": 1.0, "specular": 3.0, "color": "A05030" },
+            { "shine": 10.0, "specular": 8.0, "color": "707070" }
         ]
     }
 

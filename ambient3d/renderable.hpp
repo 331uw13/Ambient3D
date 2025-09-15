@@ -11,6 +11,10 @@
 
 
 namespace AM {
+    
+    static constexpr size_t RENDERABLE_MAX_NAME_SIZE = 24;
+    static constexpr float MATERIAL_DEFAULT_SHINE = 0.3f;
+    static constexpr float MATERIAL_DEFAULT_SPECULAR = 6.0f;
 
     struct MeshAttrib {
 
@@ -23,7 +27,8 @@ namespace AM {
         
         bool render_backface    { false };
         Color tint              { WHITE };
-        float shine             { 0.3f };
+        float shine             { MATERIAL_DEFAULT_SHINE };
+        float specular          { MATERIAL_DEFAULT_SPECULAR };
    
     };
 
@@ -39,8 +44,6 @@ namespace AM {
     
     // ----------------------------------
 
-
-    static constexpr size_t RENDERABLE_MAX_NAME_SIZE = 24;
 
 
     class Renderable {
@@ -58,6 +61,7 @@ namespace AM {
 
             bool is_loaded() { return m_loaded; }
             Matrix* transform;
+            BoundingBox boundingbox;
 
             // Size is number of meshes in model. 
             // Only available if ENABLE_MESH_TRANSFORMS is set used.

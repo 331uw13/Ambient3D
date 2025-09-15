@@ -5,16 +5,19 @@
 #include <thread>
 #include <functional>
 #include <map>
+#include <nlohmann/json.hpp>
 
 #include <deque>
 #include <asio.hpp>
 
 #include "packet_writer.hpp"
 #include "network_player.hpp"
+#include "server_config.hpp"
 #include "../item_manager.hpp"
 
 #include "../gui/chatbox.hpp"
 
+using json = nlohmann::json;
 
 
 namespace AM {
@@ -46,7 +49,7 @@ namespace AM {
             Network(asio::io_context& io_context, const NetConnectCFG& cfg);
             ~Network() {}
 
-            void assign_item_manager(AM::ItemManager* item_manager) {
+            void set_item_manager(AM::ItemManager* item_manager) {
                 m_engine_item_manager = item_manager;
             }
 
@@ -62,6 +65,9 @@ namespace AM {
 
             bool is_connected() { return m_connected; }
             void close(asio::io_context& io_context);
+
+            //json server_cfg_json;
+            AM::ServerCFG server_cfg;
 
             int player_id;
             //UUID uuid;

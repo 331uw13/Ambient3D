@@ -8,7 +8,6 @@
 #include <functional>
 
 #include "player.hpp"
-#include "terrain.hpp"
 #include "shader_util.hpp"
 #include "uniform_buffer.hpp"
 #include "light.hpp"
@@ -51,7 +50,7 @@ namespace AM {
 
             Font     font;
             Player   player;
-            Terrain  terrain;
+            //Terrain  terrain;
 
             Network* net;
 

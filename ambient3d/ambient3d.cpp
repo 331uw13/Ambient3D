@@ -126,7 +126,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
         { chatbox->push_message(r, g, b, str); };
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
-    this->net->assign_item_manager(&m_item_manager);
+    this->net->set_item_manager(&m_item_manager);
     
 }
 
@@ -312,6 +312,13 @@ void AM::State::m_render_dropped_items() {
     for(auto it = items->begin(); it != items->end(); ++it) {
         const AM::Item* item = &it->second;
        
+        if(item->renderable.get() == NULL) {
+            continue;
+        }
+        if(!item->renderable->is_loaded()) {
+            continue;
+        }
+
         *item->renderable->transform = MatrixTranslate(item->pos_x, item->pos_y, item->pos_z);
         item->renderable->render();
     }
@@ -336,10 +343,11 @@ void AM::State::frame_begin() {
     this->player.update_animation();
 
     this->update_lights();
+    /*
     this->terrain.find_new_chunks(
             this->player.chunk_x,
             this->player.chunk_z, 16);
-
+    */
 }
             
 void AM::State::m_fixed_tick_internal() {
@@ -349,7 +357,7 @@ void AM::State::m_fixed_tick_internal() {
 
         // Update all items the server has sent.
         m_item_manager.update_queue();
-        m_item_manager.update_lifetimes();
+        m_item_manager.cleanup_unused_items(this->player.pos);
 
         AM::packet_prepare(&this->net->packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
         AM::packet_write_int(&this->net->packet, { this->net->player_id });
