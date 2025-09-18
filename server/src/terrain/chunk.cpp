@@ -5,21 +5,14 @@
 
 
 static float noise_func(float x, float z) {
-    float level 
-        = perlin_noise_2D(x, z) * 3.0
-        + perlin_noise_2D(x*0.1, z*0.1)*20.0
-        + ((perlin_noise_2D(x*0.2, z*0.2)*120.0)
-        * perlin_noise_2D(x*0.05, z*0.05))
-        + ((perlin_noise_2D(x*0.05, z*0.05)*500.0)
-        * perlin_noise_2D(x*0.01, z*0.01));
- 
+    float level  = perlin_noise_2D(x, z) * 3.0;
+
     return level;
 }
 
 
-void AM::Chunk::generate(const AM::ServerCFG& server_cfg, int seed, int x, int z) {
-    m_id = z * server_cfg.chunk_size + x;
-    m_pos = ChunkPos(x, z);
+void AM::Chunk::generate(const AM::ServerCFG& server_cfg, const AM::ChunkPos& chunk_pos, int seed) {
+    this->pos = chunk_pos;
 
     const size_t num_points = (server_cfg.chunk_size+1) * (server_cfg.chunk_size+1);
     this->height_points = new float[num_points];
@@ -28,7 +21,9 @@ void AM::Chunk::generate(const AM::ServerCFG& server_cfg, int seed, int x, int z
     for(int local_z = 0; local_z <= server_cfg.chunk_size; local_z++) {
         for(int local_x = 0; local_x <= server_cfg.chunk_size; local_x++) {
         
-            float height_level = noise_func((float)(x+local_x), (float)(z+local_z));
+            float height_level = noise_func(
+                    (float)(local_x + chunk_pos.x * server_cfg.chunk_size) / 10.0f,
+                    (float)(local_z + chunk_pos.z * server_cfg.chunk_size) / 10.0f);
 
             this->height_points[point_index] = height_level;
             point_index++;

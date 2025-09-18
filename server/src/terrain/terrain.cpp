@@ -6,24 +6,24 @@
 
 
 void AM::Terrain::add_chunk(const AM::Chunk& chunk) {
-    auto inserted = this->chunk_map.insert(std::make_pair(chunk.get_id(), chunk)).first;
+    auto inserted = this->chunk_map.insert(std::make_pair(chunk.pos, chunk)).first;
     if(inserted == this->chunk_map.end()) {
-        fprintf(stderr, "ERROR! %s: Failed to add chunk (id = %i)\n",
-                __func__, chunk.get_id());
+        fprintf(stderr, "ERROR! %s: Failed to add chunk (X=%i, Z=%i)\n",
+                __func__, chunk.pos.x, chunk.pos.z);
         this->chunk_map_mutex.unlock();
         return;
     }
 }
 
 void AM::Terrain::remove_chunk(const AM::Chunk& chunk) {
-    auto chunk_it = this->chunk_map.find(chunk.get_id());
+    auto chunk_it = this->chunk_map.find(chunk.pos);
     if(chunk_it != this->chunk_map.end()) {
         chunk_it->second.unload();
         this->chunk_map.erase(chunk_it);
     }
 }
 
-            
+
 void AM::Terrain::delete_terrain() {
     size_t num_unloaded = 0;
     for(auto it = this->chunk_map.begin(); it != this->chunk_map.end(); ++it) {
@@ -33,45 +33,42 @@ void AM::Terrain::delete_terrain() {
 
     printf("[WORLD_GEN]: Unloaded %li chunks\n", num_unloaded);
 }
-            
+
 AM::ChunkPos AM::Terrain::get_chunk_pos(float world_x, float world_z) {
     return AM::ChunkPos(
-            (int)floor(world_x / m_server->config.chunk_size) % m_server->config.chunk_size,
-            (int)floor(world_z / m_server->config.chunk_size) % m_server->config.chunk_size
-            );
+            (int)floor(world_x / (m_server->config.chunk_size * m_server->config.chunk_scale)),
+            (int)floor(world_z / (m_server->config.chunk_size * m_server->config.chunk_scale)));
 }
 
-AM::ChunkID AM::Terrain::get_chunk_id(const ChunkPos& chunk_pos) {
-    return chunk_pos.z * m_server->config.chunk_size + chunk_pos.x;    
-}
 
 
 void AM::Terrain::foreach_chunk_nearby(float world_x, float world_z, 
-        std::function<void(const AM::Chunk*, const AM::ChunkPos&, AM::ChunkID)> callback) {
+        std::function<void(const AM::Chunk*, const AM::ChunkPos&)> callback) {
 
-    const int chunk_size_half = m_server->config.chunk_size / 2;
+    AM::ChunkPos origin_chunk_pos = this->get_chunk_pos(world_x, world_z);
+    
+    const int chunk_size_half = m_server->config.render_distance / 2; 
+    for(int chunk_lZ = -chunk_size_half; chunk_lZ <= chunk_size_half; chunk_lZ++) {
+        for(int chunk_lX = -chunk_size_half; chunk_lX <= chunk_size_half; chunk_lX++) { 
+           
+            AM::ChunkPos chunk_pos {
+                origin_chunk_pos.x + chunk_lX,
+                origin_chunk_pos.z + chunk_lZ
+            };
 
-    for(int chunk_lZ = -chunk_size_half; chunk_lZ < chunk_size_half; chunk_lZ++) {
-        for(int chunk_lX = -chunk_size_half; chunk_lX < chunk_size_half; chunk_lX++) { 
+            //printf("%i, %i\n", chunk_pos.x, chunk_pos.z);
 
-            AM::ChunkPos chunk_pos
-                = this->get_chunk_pos(world_x, world_z);
-            
-            chunk_pos.x += chunk_lX;
-            chunk_pos.z += chunk_lZ;
+            auto chunk_it = this->chunk_map.find(chunk_pos);
 
-            AM::ChunkID chunk_id 
-                = this->get_chunk_id(chunk_pos);
-
-            auto chunk_it = this->chunk_map.find(chunk_id);
             if(chunk_it != this->chunk_map.end()) {
-                callback(&chunk_it->second, chunk_pos, chunk_id);
+                callback(&chunk_it->second, chunk_pos);
             }
             else {
-                callback(NULL, chunk_pos, chunk_id);
+                callback(NULL, chunk_pos);
             }
         }
     }
+    //printf("-----------------------––\n");
 }
 
 

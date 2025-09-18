@@ -38,14 +38,13 @@ namespace AM {
             void m_do_read();
 
             tcp::socket  m_socket;
-            Server*      m_server;
+            AM::Server*  m_server;
 
             void m_handle_received_packet(size_t sizeb);
             char m_data[AM::MAX_PACKET_SIZE]; // <- Received data. (TODO: Should probably rename.)
             bool m_fully_connected { false };
     };
 };
-
 
 
 

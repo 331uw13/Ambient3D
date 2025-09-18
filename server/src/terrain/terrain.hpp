@@ -14,20 +14,19 @@ namespace AM {
 
     class Terrain {
         public:
-            std::mutex chunk_map_mutex;
+            std::mutex                                  chunk_map_mutex;
+            std::unordered_map<AM::ChunkPos, AM::Chunk> chunk_map;
 
             void add_chunk(const AM::Chunk& chunk);
             void remove_chunk(const AM::Chunk& chunk);
             void delete_terrain();
 
             AM::ChunkPos  get_chunk_pos(float world_x, float world_z);
-            AM::ChunkID   get_chunk_id(const ChunkPos& chunk_pos);
 
-            std::unordered_map<ChunkID, AM::Chunk> chunk_map;
             
 
             void foreach_chunk_nearby(float world_x, float world_z, 
-                    std::function<void(const AM::Chunk*, const AM::ChunkPos&, AM::ChunkID)> callback);
+                    std::function<void(const AM::Chunk*, const AM::ChunkPos&)> callback);
             
             void set_server(AM::Server* server) { m_server = server; }
 

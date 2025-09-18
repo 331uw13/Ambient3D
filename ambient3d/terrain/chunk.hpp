@@ -9,24 +9,27 @@
 
 namespace AM {
 
-    typedef int ChunkID;
-
-
     class Chunk {
         public:
-            AM::ChunkID id;
+            
             AM::ChunkPos pos;
             float* height_points;
 
-            void load_mesh(float* points, size_t points_sizeb);
+            void load(float* points, size_t points_sizeb, int chunk_size, float scale, Material* mat);
             void unload();
+            bool is_loaded() { return m_loaded; }
 
             void render();
 
+
         private:
 
-            Mesh m_mesh;
-
+            bool       m_loaded;
+            Mesh       m_mesh;
+            Material*  m_material;
+            int        m_chunk_size;
+            float      m_get_height_at_local(int x, int z);
+            float      m_scale;
     };
 
 };

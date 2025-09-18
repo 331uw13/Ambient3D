@@ -114,6 +114,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
                 .num = 1, .elem_sizeb = 4
             }});
 
+
     // Initialize network.
 
     this->register_gui_module<AM::Chatbox>(GuiModuleID::CHATBOX, AM::GuiModule::RenderOPT::ALWAYS);
@@ -124,14 +125,13 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
         { chatbox->push_message(r, g, b, str); };
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
+    
     this->net->set_engine_state(this);
+    this->terrain.set_engine_state(this);
+    this->terrain.create_chunk_materials();
 }
 
 AM::State::~State() {
-
-    for(Shader& shader : this->shaders) {
-        UnloadShader(shader);
-    }
 
     m_lights_ubo.free();
 
@@ -149,6 +149,13 @@ AM::State::~State() {
     delete this->net;
     
     this->terrain.free_regenbuf();
+    this->terrain.unload_all_chunks();
+    this->terrain.unload_materials();
+
+    for(Shader& shader : this->shaders) {
+        UnloadShader(&shader);
+    }
+
     CloseWindow();
 }
 
@@ -342,11 +349,7 @@ void AM::State::frame_begin() {
     this->player.update_animation();
 
     this->update_lights();
-    /*
-    this->terrain.find_new_chunks(
-            this->player.chunk_x,
-            this->player.chunk_z, 16);
-    */
+    this->terrain.render();
 }
             
 void AM::State::m_fixed_tick_internal() {

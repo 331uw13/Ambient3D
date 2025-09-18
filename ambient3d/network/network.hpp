@@ -73,16 +73,7 @@ namespace AM {
             void set_engine_state(AM::State* state) {
                 m_engine = state;
             }
-            /*
-            void set_item_manager(AM::ItemManager* item_manager) {
-                m_engine_item_manager = item_manager;
-            }
-
-            void set_terrain(AM::Terrain* terrain) {
-                m_engine_terrain = terrain;
-            }
-            */
-
+            
         private:
             bool m_connected { false };
             bool m_fully_connected { false };

@@ -94,12 +94,6 @@ void AM::Network::m_handle_udp_packet(size_t sizeb) {
                 return;
             }
             {
-                for(int i = sizeb-8; i < sizeb; i++) {
-                    printf("0x%x ", m_udprecv_data[i]);
-                }
-                printf("\n");
-
-
                 printf("[NETWORK]: Got chunk update of %li bytes\n", sizeb);
                 m_engine->terrain.add_chunkdata_to_queue(m_udprecv_data, sizeb);
             }

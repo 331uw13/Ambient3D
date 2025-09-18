@@ -21,6 +21,7 @@ namespace AM {
         int chunk_size;
         int render_distance;
         int chunkdata_uncompressed_max_bytes;
+        float chunk_scale;
         std::string json_data;
     };
 

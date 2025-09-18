@@ -14,10 +14,10 @@ namespace AM {
     class Player {
         public:
 
-            Player(std::shared_ptr<TCP_session> _tcp_session);
+            Player(std::shared_ptr<AM::TCP_session> _tcp_session);
            
-            std::shared_ptr<TCP_session> tcp_session;
-            std::unordered_map<AM::ChunkID, bool> loaded_chunks;
+            std::shared_ptr<AM::TCP_session> tcp_session;
+            std::unordered_map<AM::ChunkPos, bool> loaded_chunks;
 
             int id           { -1 };
             Vec3 pos         { 0, 0, 0 };

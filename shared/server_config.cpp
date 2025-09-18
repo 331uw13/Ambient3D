@@ -22,7 +22,7 @@ void AM::ServerCFG::parse_from_memory(const json& data) {
     this->chunk_size = data["chunk_size"].template get<int>();
     this->render_distance = data["render_distance"].template get<int>();
     this->chunkdata_uncompressed_max_bytes = data["chunkdata_uncompressed_max_bytes"].template get<int>();
-
+    this->chunk_scale = data["chunk_scale"].template get<float>();
     this->json_data = data.dump();
 }
 

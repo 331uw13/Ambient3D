@@ -241,6 +241,8 @@ void AM::Server::m_send_player_chunk_updates() {
             
     const size_t height_points_sizeb = ((this->config.chunk_size+1) * (this->config.chunk_size+1)) * sizeof(float);
     
+    std::vector<AM::ChunkPos> chunk_positions;
+
     for(auto it = this->players.begin();
             it != this->players.end(); ++it) {
         Player* player = &it->second;
@@ -249,29 +251,37 @@ void AM::Server::m_send_player_chunk_updates() {
         }
 
 
+
         AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::CHUNK_DATA);
         size_t num_chunks = 0;
        
+        chunk_positions.clear();
         m_chunkdata_buf.clear();
 
         this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
-        [this, &num_chunks, &height_points_sizeb, player]
-        (const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos, AM::ChunkID chunk_id) {
+        [this, &num_chunks, &height_points_sizeb, &chunk_positions, player]
+        (const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos) {
+        
+            // Packets may be broken into few little bit smaller packets.
+            if(m_chunkdata_buf.size_inbytes() > 1024*32) {
+                return; // TODO: return bool to continue loop or break.
+            }
+
             if(!chunk) {
                 return;
             }
-
-            if(player->loaded_chunks.find(chunk_id)
+        
+            if(player->loaded_chunks.find(chunk_pos)
                     != player->loaded_chunks.end()) {
                 return; // Player has already received this chunk.
             }
 
-            m_chunkdata_buf.write_bytes((void*)&chunk_id, sizeof(chunk_id));
             m_chunkdata_buf.write_bytes((void*)&chunk_pos.x, sizeof(chunk_pos.x));
             m_chunkdata_buf.write_bytes((void*)&chunk_pos.z, sizeof(chunk_pos.z));
             m_chunkdata_buf.write_bytes((void*)chunk->height_points, height_points_sizeb);
 
-            player->loaded_chunks.insert(std::make_pair(chunk_id, true));
+            player->loaded_chunks.insert(std::make_pair(chunk_pos, true));
+            chunk_positions.push_back(chunk_pos);
 
             num_chunks++;
         });
@@ -289,9 +299,15 @@ void AM::Server::m_send_player_chunk_updates() {
                     data_destination,
                     m_chunkdata_buf.size_inbytes(),   // Source size.
                     AM::MAX_PACKET_SIZE);             // Destination max size.
-        if(compressed_size < 0) {
+        if(compressed_size <= 0) {
             fprintf(stderr, "ERROR! %s: Failed to compress chunk data. (client will not receive an update)\n",
                     __func__);
+            
+            // Remove "loaded" chunks that were marked as written.
+            for(const AM::ChunkPos& chunk_pos : chunk_positions) {
+                player->loaded_chunks.erase(chunk_pos);
+            }
+
             continue;
         }
 
@@ -337,20 +353,6 @@ void AM::Server::m_update_loop_th__func() {
 
 void AM::Server::m_worldgen_th__func() {
     
-    // Generate chunks in 0(x), 0(z)
-    const int chunk_size_half = this->config.chunk_size / 2;
-  
-    for(int z = -chunk_size_half; z < chunk_size_half; z++) {
-        for(int x = -chunk_size_half; x < chunk_size_half; x++) { 
-            Chunk chunk;
-            chunk.generate(this->config, m_worldgen_seed, x, z);
-            this->terrain.add_chunk(chunk);
-        }
-    }
-
-    printf("[WORLD_GEN]: Generated %i chunks for spawn\n", 
-            this->config.chunk_size * this->config.chunk_size);
-
     while(m_keep_threads_alive) {
         this->players_mutex.lock();
         this->terrain.chunk_map_mutex.lock();
@@ -358,16 +360,17 @@ void AM::Server::m_worldgen_th__func() {
         for(auto it = this->players.begin();
                 it != this->players.end(); ++it) {
             const Player* player = &it->second;
-
+            if(!player->tcp_session->is_fully_connected()) {
+                continue;
+            }
 
             this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
-            [this](const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos, AM::ChunkID chunk_id) {
+            [this](const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos) {
                 if(!chunk) {
                     AM::Chunk chunk;
-                    chunk.generate(this->config, m_worldgen_seed, chunk_pos.x, chunk_pos.z);
-                    this->terrain.add_chunk(chunk);    
-                    printf("[WORLD_GEN]: ChunkPos = (%i, %i), ChunkID = %i\n",
-                            chunk_pos.x, chunk_pos.z, chunk_id);
+                    chunk.generate(this->config, chunk_pos, m_worldgen_seed);
+                    this->terrain.add_chunk(chunk);
+                    //printf("[WORLD_GEN]: ChunkPos = (%i, %i)\n", chunk_pos.x, chunk_pos.z);
                 }
             });
             

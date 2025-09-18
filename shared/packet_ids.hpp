@@ -90,10 +90,9 @@ namespace AM {
         //
         // ---------------------------------
         // 0            :  Packet ID        (int)
-        // 4            :  Chunk ID         (int)
-        // 8            :  Chunk X          (int)
-        // 12           :  Chunk Z          (int)
-        // 16           :  Chunk data       (float array)
+        // 4            :  Chunk X          (int)
+        // 8            :  Chunk Z          (int)
+        // 12           :  Chunk data       (float array)
         // 
         // NOTES:
         // The packet may contain more than one chunk.
@@ -142,6 +141,7 @@ namespace AM {
         static constexpr size_t PLAYER_MOVEMENT_AND_CAMERA = 28;
         static constexpr size_t PLAYER_ID = 4;
         static constexpr size_t PLAYER_CONNECTED = 4;
+        static constexpr size_t PLAYER_UNLOADED_CHUNK = 8;
     };
 };
 

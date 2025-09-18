@@ -76,9 +76,10 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
         case AM::PacketID::PLAYER_FULLY_CONNECTED:
             {
                 m_fully_connected = true;
-                printf("PLAYER CONNECTED ID = %i\n", this->player_id);
+                printf("Player connected. (ID: %i)\n", this->player_id);
             }
             break;
+
         // ...
     }
 }
