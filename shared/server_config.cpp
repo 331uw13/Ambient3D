@@ -3,7 +3,6 @@
 
 
 AM::ServerCFG::ServerCFG(const char* json_cfg_path) {
-
     std::fstream stream(json_cfg_path);
     if(!stream.is_open()) {
         fprintf(stderr, "ERROR! %s: Failed to open server configuration file (%s)\n",
@@ -22,6 +21,7 @@ void AM::ServerCFG::parse_from_memory(const json& data) {
     this->item_near_distance = data["item_near_distance"].template get<float>();
     this->chunk_size = data["chunk_size"].template get<int>();
     this->render_distance = data["render_distance"].template get<int>();
+    this->chunkdata_uncompressed_max_bytes = data["chunkdata_uncompressed_max_bytes"].template get<int>();
 
     this->json_data = data.dump();
 }

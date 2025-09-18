@@ -1,4 +1,4 @@
-FLAGS = -std=c++20 -ggdb -Wall -Wextra -Wno-switch
+FLAGS = -std=c++20 -ggdb -Wall -Wextra -Wno-switch -fsanitize=address
 CXX = g++
 
 TARGET_NAME = ambient3d-server
@@ -9,7 +9,7 @@ SRC = $(shell find ./src -type f -name *.cpp)
 SRC += $(shell find $(SHARED) -type f -name *.cpp)
 OBJS = $(SRC:.cpp=.o)
 
-LIBS = -ljsoncpp
+LIBS = -ljsoncpp -llz4
 
 all: $(TARGET_NAME)
 

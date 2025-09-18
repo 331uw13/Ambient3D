@@ -80,13 +80,10 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
 
                 memmove(&player->anim_id, m_data+offset, sizeof(int));
                 //offset += sizeof(int);
-                
 
             }
             break;
-
     }
-
     //printf("(UDP) PacketID: %i\n", packet_id);
 }
 

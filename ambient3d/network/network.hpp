@@ -14,6 +14,7 @@
 #include "network_player.hpp"
 #include "server_config.hpp"
 #include "../item_manager.hpp"
+#include "../terrain/terrain.hpp"
 
 #include "../gui/chatbox.hpp"
 
@@ -40,7 +41,7 @@ namespace AM {
         UDP
     };
 
-
+    class State;
 
     class Network {
 
@@ -49,9 +50,7 @@ namespace AM {
             Network(asio::io_context& io_context, const NetConnectCFG& cfg);
             ~Network() {}
 
-            void set_item_manager(AM::ItemManager* item_manager) {
-                m_engine_item_manager = item_manager;
-            }
+            
 
             // The packet can be written with functions from
             // './shared/packet_writer.*'
@@ -64,16 +63,29 @@ namespace AM {
             std::map<int/* player_id*/, N_Player>  players;
 
             bool is_connected() { return m_connected; }
+            bool is_fully_connected() { return m_fully_connected; }
             void close(asio::io_context& io_context);
 
-            //json server_cfg_json;
             AM::ServerCFG server_cfg;
 
             int player_id;
-            //UUID uuid;
+
+            void set_engine_state(AM::State* state) {
+                m_engine = state;
+            }
+            /*
+            void set_item_manager(AM::ItemManager* item_manager) {
+                m_engine_item_manager = item_manager;
+            }
+
+            void set_terrain(AM::Terrain* terrain) {
+                m_engine_terrain = terrain;
+            }
+            */
 
         private:
             bool m_connected { false };
+            bool m_fully_connected { false };
 
             std::function<void(
                     uint8_t, // Red
@@ -81,8 +93,8 @@ namespace AM {
                     uint8_t, // Blue
                     const std::string&)> m_msg_recv_callback;
 
-            ItemManager* m_engine_item_manager;
-
+            AM::State* m_engine;
+                
             bool m_udp_data_ready_to_send;
             bool m_tcp_data_ready_to_send;
            

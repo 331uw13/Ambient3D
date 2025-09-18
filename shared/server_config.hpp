@@ -20,7 +20,7 @@ namespace AM {
         float item_near_distance;
         int chunk_size;
         int render_distance;
-
+        int chunkdata_uncompressed_max_bytes;
         std::string json_data;
     };
 

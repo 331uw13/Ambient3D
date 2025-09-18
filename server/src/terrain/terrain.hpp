@@ -26,10 +26,10 @@ namespace AM {
             std::unordered_map<ChunkID, AM::Chunk> chunk_map;
             
 
-            void set_server(AM::Server* server) { m_server = server; }
-
             void foreach_chunk_nearby(float world_x, float world_z, 
                     std::function<void(const AM::Chunk*, const AM::ChunkPos&, AM::ChunkID)> callback);
+            
+            void set_server(AM::Server* server) { m_server = server; }
 
         private:
 

@@ -62,7 +62,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
                 ));  
 
 
-    m_item_manager.set_item_default_shader(this->shaders[AM::ShaderIDX::DEFAULT]);
+    this->item_manager.set_item_default_shader(this->shaders[AM::ShaderIDX::DEFAULT]);
     SetTraceLogLevel(LOG_NONE);
 
 
@@ -114,8 +114,6 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
                 .num = 1, .elem_sizeb = 4
             }});
 
-
-
     // Initialize network.
 
     this->register_gui_module<AM::Chatbox>(GuiModuleID::CHATBOX, AM::GuiModule::RenderOPT::ALWAYS);
@@ -126,8 +124,7 @@ AM::State::State(uint16_t win_width, uint16_t win_height, const char* title, AM:
         { chatbox->push_message(r, g, b, str); };
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
-    this->net->set_item_manager(&m_item_manager);
-    
+    this->net->set_engine_state(this);
 }
 
 AM::State::~State() {
@@ -150,6 +147,8 @@ AM::State::~State() {
 
     this->net->close(m_asio_io_context);
     delete this->net;
+    
+    this->terrain.free_regenbuf();
     CloseWindow();
 }
 
@@ -307,7 +306,7 @@ void AM::State::draw_info() {
 
 void AM::State::m_render_dropped_items() {
     
-    auto items = m_item_manager.get_dropped_items();
+    auto items = this->item_manager.get_dropped_items();
 
     for(auto it = items->begin(); it != items->end(); ++it) {
         const AM::Item* item = &it->second;
@@ -351,13 +350,19 @@ void AM::State::frame_begin() {
 }
             
 void AM::State::m_fixed_tick_internal() {
+    if(!this->net->is_fully_connected()) {
+        return;
+    }
+
     m_fixed_tick_timer += GetFrameTime();
     if(m_fixed_tick_timer > m_fixed_tick_speed) {
         m_fixed_tick_timer = 0;
 
         // Update all items the server has sent.
-        m_item_manager.update_queue();
-        m_item_manager.cleanup_unused_items(this->player.pos);
+        this->item_manager.update_items_queue();
+        this->item_manager.cleanup_unused_items(this->player.pos);
+
+        this->terrain.update_chunkdata_queue();
 
         AM::packet_prepare(&this->net->packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
         AM::packet_write_int(&this->net->packet, { this->net->player_id });

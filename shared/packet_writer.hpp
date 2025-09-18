@@ -10,7 +10,11 @@
 
 
 namespace AM {
- 
+
+    // TODO: Maybe it is good idea to move the packet id internally 
+    // to last 4 bytes instead of the beginning.
+    // Large packet data may suffer... from shifting the memory around.
+
     enum PacketStatus : int {
         NOT_PREPARED=0, // Writing is not allowed because packet id would be missing.
         PREPARED,  // Prepared but not written anything yet.
@@ -18,9 +22,9 @@ namespace AM {
     };
 
     struct Packet {
-        char   data[AM::MAX_PACKET_SIZE] { 0 };
-        size_t size { 0 };
-        
+        char    data[AM::MAX_PACKET_SIZE];
+        size_t  size { 0 };
+       
         PacketStatus status;
     };
 

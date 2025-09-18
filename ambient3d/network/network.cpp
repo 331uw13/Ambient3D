@@ -2,9 +2,9 @@
 #include <string>
 #include <iostream>
 
+#include "../ambient3d.hpp"
 #include "network.hpp"
 #include "packet_parser.hpp"
-
 
 
 void AM::Network::m_handle_tcp_packet(size_t sizeb) {
@@ -15,11 +15,17 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
 
     switch(packet_id) {
         case AM::PacketID::CHAT_MESSAGE:
+            if(!m_fully_connected) {
+                return;
+            }
             printf("[CHAT]: %s\n", m_tcprecv_data);
             m_msg_recv_callback(255, 255, 255, m_tcprecv_data);
             break;
 
         case AM::PacketID::SERVER_MESSAGE:
+            if(!m_fully_connected) {
+                return;
+            }
             printf("[SERVER]: %s\n", m_tcprecv_data);
             m_msg_recv_callback(255, 200, 50, m_tcprecv_data);
             break;
@@ -50,8 +56,8 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
             break;
 
         case AM::PacketID::SAVE_ITEM_LIST:
-            m_engine_item_manager->set_item_list(json::parse(m_tcprecv_data));
             printf("[NETWORK]: Received server item list.\n");
+            m_engine->item_manager.set_item_list(json::parse(m_tcprecv_data));
 
             AM::packet_prepare(&this->packet, AM::PacketID::GET_SERVER_CONFIG);
             this->send_packet(AM::NetProto::TCP);
@@ -60,7 +66,14 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
         case AM::PacketID::SERVER_CONFIG:
             printf("[NETWORK]: Received server configuration.\n");
             this->server_cfg.parse_from_memory(json::parse(m_tcprecv_data));
-            m_engine_item_manager->set_server_config(this->server_cfg);
+            m_engine->item_manager.set_server_config(this->server_cfg);
+
+            AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_FULLY_CONNECTED);
+            this->send_packet(AM::NetProto::TCP);
+            
+            // The regenbuf will not be allocated if it already is.
+            m_engine->terrain.allocate_regenbuf(this->server_cfg.chunkdata_uncompressed_max_bytes);
+            m_fully_connected = true;
             break;
 
     }
@@ -68,11 +81,34 @@ void AM::Network::m_handle_tcp_packet(size_t sizeb) {
 
 
 void AM::Network::m_handle_udp_packet(size_t sizeb) {
+    
+   
     AM::PacketID packet_id = AM::parse_network_packet(m_udprecv_data, sizeb);
+
+    //printf("[NETWORK_DEBUG]: PacketID = %i, %i\n", packet_id, AM::PacketID::CHUNK_DATA);
 
     switch(packet_id) {
 
+        case AM::PacketID::CHUNK_DATA:
+            if(!m_fully_connected) {
+                return;
+            }
+            {
+                for(int i = sizeb-8; i < sizeb; i++) {
+                    printf("0x%x ", m_udprecv_data[i]);
+                }
+                printf("\n");
+
+
+                printf("[NETWORK]: Got chunk update of %li bytes\n", sizeb);
+                m_engine->terrain.add_chunkdata_to_queue(m_udprecv_data, sizeb);
+            }
+            break;
+
         case AM::PacketID::ITEM_UPDATE:
+            if(!m_fully_connected) {
+                return;
+            }
             if(sizeb < (sizeof(int)*2 + sizeof(float)*3)) {
                 fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
                         "for ITEM_UPDATE\n", __func__, sizeb);
@@ -118,12 +154,15 @@ void AM::Network::m_handle_udp_packet(size_t sizeb) {
                     }
 
                     // Add the item to queue to be loaded or only updated.
-                    m_engine_item_manager->add_itembase_to_queue(itembase);
+                    m_engine->item_manager.add_itembase_to_queue(itembase);
                 }
             }
             break;
 
         case AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA:
+            if(!m_fully_connected) {
+                return;
+            }
             if(sizeb != AM::PacketSize::PLAYER_MOVEMENT_AND_CAMERA) {
                 fprintf(stderr, "%s: ERROR! Packet size(%li) doesnt match expected size "
                         "for PLAYER_MOVEMENT_AND_CAMERA\n", __func__, sizeb);

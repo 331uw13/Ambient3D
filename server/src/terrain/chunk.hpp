@@ -2,22 +2,13 @@
 #define AMBIENT3D_SERVER_CHUNK_HPP
 
 #include "server_config.hpp"
-
+#include "chunk_pos.hpp"
 
 namespace AM {
 
-    typedef int ChunkID;
-
-    struct ChunkPos {
-        int x;
-        int z;
-
-        ChunkPos(){}
-        ChunkPos(int _x, int _z) : x(_x), z(_z) {}
-    };
-
     // grid which contains ids for example 0 is nothing, 1 is tree, 2 is rock.. etc
 
+    typedef int ChunkID;
 
     class Chunk {
         public:

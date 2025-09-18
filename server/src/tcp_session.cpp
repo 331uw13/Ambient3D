@@ -57,10 +57,8 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
             break;
 
         case AM::PacketID::PLAYER_CONNECTED:
-            {
-                printf("PLAYER CONNECTED ID = %i\n", this->player_id);
-                
-                // Send item list.
+            {    
+                // Respond by sending item list.
                 AM::packet_prepare(&this->packet, AM::PacketID::SAVE_ITEM_LIST);
                 AM::packet_write_string(&this->packet, m_server->item_list.dump());
                 this->send_packet();    
@@ -72,6 +70,13 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
                 AM::packet_prepare(&this->packet, AM::PacketID::SERVER_CONFIG);
                 AM::packet_write_string(&this->packet, m_server->config.json_data.c_str());
                 this->send_packet(); 
+            }
+            break;
+
+        case AM::PacketID::PLAYER_FULLY_CONNECTED:
+            {
+                m_fully_connected = true;
+                printf("PLAYER CONNECTED ID = %i\n", this->player_id);
             }
             break;
         // ...

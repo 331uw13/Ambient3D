@@ -37,11 +37,14 @@ namespace AM {
             Server -> Client  (SAVE_ITEM_LIST)           (TCP)
             Server <- Client  (GET_SERVER_CONFIG)        (TCP)
             Server -> Client  (SERVER_CONFIG)            (TCP)
+            Server <- Client  (PLAYER_FULLY_CONNECTED)   (TCP)
         */
 
         // Server will send player their id when they are connected (via TCP)
         // Then the client will reply with their ID via UDP protocol,
         // that process saves the client's udp endpoint.
+        // If the server doesnt receive response from client via UDP
+        // it will add the client to a queue for trying again.
         PLAYER_ID,
 
         // ^-- After that if successful the server will respond with
@@ -74,6 +77,10 @@ namespace AM {
         // 4            :  Config json      (char array)
         SERVER_CONFIG,  // (tcp only)
 
+        // Client must tell the server it has been fully connected
+        // after it stored all needed information.
+        PLAYER_FULLY_CONNECTED, // (tcp only)
+
         // --------- End Connection packets -----------
 
 
@@ -91,7 +98,7 @@ namespace AM {
         // NOTES:
         // The packet may contain more than one chunk.
         // The chunk data size is equal to (server_config.chunk_size * server_config.chunk_size)
-        CHUNK_DATA, // (tcp only)
+        CHUNK_DATA, // (udp only)
 
         // This packet contains the player's position in the world.
         // It also has camera pitch, yaw and animation information.

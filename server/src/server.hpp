@@ -17,7 +17,7 @@
 #include "player.hpp"
 #include "item_base.hpp"
 #include "terrain/terrain.hpp"
-
+#include "terrain/chunk_data.hpp"
 
 using json = nlohmann::json;
 using namespace asio::ip;
@@ -87,6 +87,12 @@ namespace AM {
             std::thread  m_worldgen_th;
             int          m_worldgen_seed { 0 }; // <- Not curently used but for future improvements.
 
+            AM::ChunkData m_chunkdata_buf;
+            /*
+            char*        m_chunk_data_buffer;
+            size_t       m_chunk_data_buffer_size;
+            size_t       m_chunk_data_buffer_memsize;
+            */
             // TCP is used for chat.
             tcp::acceptor m_tcp_acceptor;
             void          m_do_accept_TCP();

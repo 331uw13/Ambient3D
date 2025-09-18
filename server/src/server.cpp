@@ -4,6 +4,7 @@
 #include <chrono>
 #include <ctime>
 #include <cstdlib>
+#include <lz4.h>
 
 #include <fstream>
 #include <iostream>
@@ -19,15 +20,17 @@ AM::Server::Server(asio::io_context& context, const AM::ServerCFG& cfg) :
     if(m_parse_item_list(cfg.item_list_path)) {
         this->start(context);
     }
+    
 }
         
 AM::Server::~Server() {
-
+    m_chunkdata_buf.free_memory();
     printf("Server closed.\n");
 }
 
 
 void AM::Server::start(asio::io_context& io_context) {
+    m_chunkdata_buf.allocate(1024 * 1024);
 
     m_udp_handler.start(this);
     m_do_accept_TCP();
@@ -236,39 +239,70 @@ void AM::Server::m_send_player_chunk_updates() {
     this->players_mutex.lock();
     this->terrain.chunk_map_mutex.lock();
             
-    const size_t height_points_size = ((this->config.chunk_size) * (this->config.chunk_size)) * sizeof(float);
+    const size_t height_points_sizeb = ((this->config.chunk_size+1) * (this->config.chunk_size+1)) * sizeof(float);
     
     for(auto it = this->players.begin();
             it != this->players.end(); ++it) {
-        const Player* player = &it->second;
+        Player* player = &it->second;
+        if(!player->tcp_session->is_fully_connected()) {
+            continue;
+        }
 
-        AM::packet_prepare(&player->tcp_session->packet, AM::PacketID::CHUNK_DATA);
+
+        AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::CHUNK_DATA);
         size_t num_chunks = 0;
+       
+        m_chunkdata_buf.clear();
 
         this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
-        [this, &num_chunks, &height_points_size, player]
+        [this, &num_chunks, &height_points_sizeb, player]
         (const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos, AM::ChunkID chunk_id) {
-            if(!chunk) { return; }
+            if(!chunk) {
+                return;
+            }
 
-            /*
-            AM::packet_write_int(&player->tcp_session->packet, { 
-                    chunk_id,
-                    chunk_pos.x,
-                    chunk_pos.z
-                    });
+            if(player->loaded_chunks.find(chunk_id)
+                    != player->loaded_chunks.end()) {
+                return; // Player has already received this chunk.
+            }
 
-            AM::packet_write(&player->tcp_session->packet, 
-                    (void*)chunk->height_points, (this->config.chunk_size * this->config.chunk_size));
+            m_chunkdata_buf.write_bytes((void*)&chunk_id, sizeof(chunk_id));
+            m_chunkdata_buf.write_bytes((void*)&chunk_pos.x, sizeof(chunk_pos.x));
+            m_chunkdata_buf.write_bytes((void*)&chunk_pos.z, sizeof(chunk_pos.z));
+            m_chunkdata_buf.write_bytes((void*)chunk->height_points, height_points_sizeb);
+
+            player->loaded_chunks.insert(std::make_pair(chunk_id, true));
+
             num_chunks++;
-            */
         });
 
-        /*
-        if(num_chunks) {
-            player->tcp_session->send_packet();
+        if(!num_chunks) {
+            continue;
         }
-        */
 
+        char* data_source = m_chunkdata_buf.data;
+        char* data_destination = &m_udp_handler.packet.data[sizeof(AM::PacketID)];
+
+        ssize_t compressed_size = 
+            LZ4_compress_default(
+                    data_source,
+                    data_destination,
+                    m_chunkdata_buf.size_inbytes(),   // Source size.
+                    AM::MAX_PACKET_SIZE);             // Destination max size.
+        if(compressed_size < 0) {
+            fprintf(stderr, "ERROR! %s: Failed to compress chunk data. (client will not receive an update)\n",
+                    __func__);
+            continue;
+        }
+
+        printf("[CHUNK_UPDATE] (Uncompressed %0.2fkB) -> (Compressed %0.2fkB) to player_id: %i\n",
+                (float)m_chunkdata_buf.size_inbytes() / 1000.0f,
+                (float)compressed_size / 1000.0f, 
+                player->id
+                );
+        m_udp_handler.packet.status = AM::PacketStatus::HAS_DATA;
+        m_udp_handler.packet.size = compressed_size + sizeof(AM::PacketID);
+        m_udp_handler.send_packet(player->id);
     }
 
     this->players_mutex.unlock();

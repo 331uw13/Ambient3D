@@ -95,7 +95,7 @@ void AM::ItemManager::m_update_item_data(AM::ItemBase* itembase) {
 }
 
 
-void AM::ItemManager::update_queue() {
+void AM::ItemManager::update_items_queue() {
     m_itembase_queue_mutex.lock();
     for(size_t i = 0; i < m_itembase_queue.size(); i++) {
         AM::ItemBase* itembase = &m_itembase_queue[i];

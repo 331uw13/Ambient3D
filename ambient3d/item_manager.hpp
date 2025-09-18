@@ -34,8 +34,10 @@ namespace AM {
             void free();
 
             void cleanup_unused_items(const Vector3& player_pos);
-            void update_queue();
             void add_itembase_to_queue(const AM::ItemBase& itembase);
+            
+            // IMPORTANT NOTE: must be called from main thread.
+            void update_items_queue();
 
             void set_item_default_shader(const Shader& shader) { m_item_default_shader = shader; }
             void set_server_config(const AM::ServerCFG& server_cfg) { m_server_cfg = server_cfg; }

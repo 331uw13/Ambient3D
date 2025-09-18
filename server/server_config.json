@@ -4,5 +4,6 @@
     "item_list_path": "../items/item_list.json",
     "item_near_distance": 100.0,
     "chunk_size": 16,
-    "render_distance": 16
+    "render_distance": 16,
+    "chunkdata_uncompressed_max_bytes": 768000
 }

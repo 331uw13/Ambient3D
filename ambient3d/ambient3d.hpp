@@ -15,6 +15,7 @@
 #include "glsl_preproc.hpp"
 #include "util.hpp"
 #include "network/network.hpp"
+#include "terrain/terrain.hpp"
 
 
 namespace AM {
@@ -48,12 +49,12 @@ namespace AM {
 
             ~State();
 
-            Font     font;
-            Player   player;
-            //Terrain  terrain;
+            Font         font;
+            Player       player;
+            Terrain      terrain;
+            ItemManager  item_manager;
 
             Network* net;
-
 
             void    frame_begin();
             void    frame_end();
@@ -133,7 +134,6 @@ namespace AM {
             std::array<RenderTexture2D, NUM_BLOOM_SAMPLES>
                 m_bloom_samples;
 
-            ItemManager                      m_item_manager;
             void                             m_render_dropped_items();
 
             bool                             m_fixed_tick_callback_set  { false };
